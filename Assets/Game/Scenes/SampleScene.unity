@@ -1637,6 +1637,7 @@ MonoBehaviour:
   hpSlider: {fileID: 1476842606}
   MaxHealth: 10
   damageValue: 2
+  SetDamage: 0
 --- !u!136 &1279214122
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -2226,6 +2227,7 @@ MonoBehaviour:
   hpSlider: {fileID: 415178716}
   MaxHealth: 10
   damageValue: 2
+  SetDamage: 0
   _bullet: {fileID: 6586659986770288615, guid: 7c96cbbc3ed350d45bf91caa970210df, type: 3}
   bulletSpeed: 1
 --- !u!136 &1847996680
@@ -2643,6 +2645,7 @@ GameObject:
   - component: {fileID: 7478225695610044194}
   - component: {fileID: 7478225695611141602}
   - component: {fileID: 7478225695613435561}
+  - component: {fileID: 7478225695613435562}
   m_Layer: 0
   m_Name: w_baseballbat
   m_TagString: Weapon
@@ -3221,6 +3224,21 @@ CapsuleCollider:
   m_Height: 1.8
   m_Direction: 0
   m_Center: {x: -0.55, y: 0.0011264108, z: 0.0016955552}
+--- !u!114 &7478225695613435562
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7478225695613330120}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5f717831f39a8c4bb465a41901be2aa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  type: 0
+  wDamage: 2
+  wName: "\u0411\u0438\u0442\u0430"
 --- !u!4 &7478225695613435568
 Transform:
   m_ObjectHideFlags: 0
@@ -3943,6 +3961,7 @@ GameObject:
   - component: {fileID: 8619338778891918824}
   - component: {fileID: 8619338778890952616}
   - component: {fileID: 8619338778893245539}
+  - component: {fileID: 8619338778893245540}
   m_Layer: 0
   m_Name: w_handgun
   m_TagString: Weapon
@@ -4568,6 +4587,21 @@ CapsuleCollider:
   m_Height: 1.2
   m_Direction: 2
   m_Center: {x: -0.09, y: -0.0017358963, z: 0.42}
+--- !u!114 &8619338778893245540
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8619338778892943426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5f717831f39a8c4bb465a41901be2aa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  type: 0
+  wDamage: 1
+  wName: "\u041F\u0438\u0441\u0442\u043E\u043B\u0435\u0442"
 --- !u!4 &8619338778893245640
 Transform:
   m_ObjectHideFlags: 0
