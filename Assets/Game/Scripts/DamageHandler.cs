@@ -3,20 +3,20 @@ using UnityEngine;
 
 public class DamageHandler : MonoBehaviour
 {
-    private AnimationManager owner;
+    private CharacterController Owner;
     private void Start()
     {
-        owner = transform.parent.GetComponent<AnimationManager>();
+        Owner = transform.parent.GetComponent<CharacterController>();
     }
-    public void DamageEvent()
-    {
-        StartCoroutine(SetDamageInFrame());
-    }
-    private IEnumerator SetDamageInFrame()
-    {
-        owner.SetDamage = true;
-        yield return null;
-        owner.SetDamage = false;
-    }
+    //public void DamageEvent()
+    //{
+    //    StartCoroutine(SetDamageInFrame());
+    //}
+    //private IEnumerator SetDamageInFrame()
+    //{
+    //    Owner.SetDamage = true;
+    //    yield return null;
+    //    Owner.SetDamage = false;
+    //}
 
 }

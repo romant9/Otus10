@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 3699019682606710008}
   - component: {fileID: 375793414608677416}
   - component: {fileID: 975453713}
-  - component: {fileID: 7928045605156814711}
+  - component: {fileID: 1999561529836102434}
   m_Layer: 0
   m_Name: Bullet
   m_TagString: Weapon
@@ -112,7 +112,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 09e1cb46e35e27f4b81330b2578fa211, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &7928045605156814711
+--- !u!114 &1999561529836102434
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -124,6 +124,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5f717831f39a8c4bb465a41901be2aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  type: 1
-  wDamage: 3
-  wName: "\u041F\u0443\u043B\u044F"
+  _weaponType: 1
+  _weaponDamage: 3
+  _weaponName: "\u041F\u0443\u043B\u044F"
+  _isDamaging: 0
+  _weaponSpeed: 5

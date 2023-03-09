@@ -1,20 +1,22 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using Unity.IO.LowLevel.Unsafe;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
-using static UnityEngine.UI.GridLayoutGroup;
+using static GameManager;
+using static WeaponInfo;
 
-public abstract class AnimationManager : MonoBehaviour
+public abstract class CharacterController : MonoBehaviour
 {
+    protected GameManager _GM { get { return GameManager.GM; }}
     protected static int p_speed = Animator.StringToHash("Speed");
     protected static int p_hit = Animator.StringToHash("IsHit");
     protected static int p_hitting = Animator.StringToHash("IsHitting");
     protected static int p_die = Animator.StringToHash("IsDie");
 
+    protected static string clipHitName = "m_melee_combat_attack_A";
+
     public Animator _animator;
+    protected CharacterType _characterType;
     public float _speedAnim; //скорость анимации
     protected float _speedMult; //множитель скорости для режима Shift
     protected float _acceleration; //ускорение 0..1
@@ -30,27 +32,23 @@ public abstract class AnimationManager : MonoBehaviour
     public KeyCode _hitKey;
 
     public Collider selfWeapon; //свое оружие игрока, которое исключается из OnTriggerXXX
-    public Collider enemyWeapon { get; private set; } //текущее оружие врага, обнаруженное в OnTriggerXXX
-    //ToDo: не понимаю, как нормально передавать DamageEvent от анимации к любому врагу, который принимает урон
-    public AnimationManager enemy; //враг
-
+    private WeaponInfo enemyWeaponInfo;
     public Slider hpSlider; //Слайдер здоровья
     public float MaxHealth = 10; //Здоровье игрока
-    public float damageValue = 1; //Величина урона по игроку
-
-    protected bool oneShootDamage; //костыль для обработки одиночного урона от выстрела через OnTriggerXXX
-    bool nextShoot = true; //продолжение костыля
 
     private float _health;
-    public Action<Collider> RecieveDamageAction;
-    [HideInInspector]
-    public bool SetDamage; //true, когда срабатывает Event от Animator
+    private Text _healthIndicator;
+    public Action<Collider> RecieveDamageAction; //в принципе можно обойтись без Action
+    
+    private bool SetAttack; //true, когда срабатывает анимация атаки
+    private bool isAlive = true;
 
 
     //Вопрос, как перейти из AnyState к смерти
-    public static bool ExtTriggerCondition(WeaponInfo.WeaponType type, bool isPolice)
+    public static bool ExtTriggerCondition(WeaponType weaponType, bool isPolice, out bool isFire)
     {
-        bool condition = type == WeaponInfo.WeaponType.Fire ? (isPolice ? false : true) : true;
+        isFire = weaponType == WeaponType.Fire;
+        bool condition = isFire ? (isPolice ? false : true) : true;
         return condition;
     }
 
@@ -58,69 +56,70 @@ public abstract class AnimationManager : MonoBehaviour
     {
         _health = MaxHealth;
         RecieveDamageAction += OnDamageRecieve;
+        hpSlider.maxValue = MaxHealth;
+        _healthIndicator = hpSlider.transform.Find("HP").GetComponent<Text>();
+        _healthIndicator.text = MaxHealth.ToString();
+        CharacterInit();
+    }
+    protected virtual void CharacterInit()
+    {
     }
 
-    public virtual void OnTriggerStay(Collider otherWeapon)
+    public virtual void OnTriggerEnter(Collider otherWeapon)
     {
         if (otherWeapon != selfWeapon && otherWeapon.tag == "Weapon")
         {
-            var type = otherWeapon.GetComponent<WeaponInfo>().type;
-            if (ExtTriggerCondition(type, name == "Police")) //если пуля, то на полицейского не действует, а для хулигана всегда true
+            enemyWeaponInfo = otherWeapon.GetComponent<WeaponInfo>();
+            bool condition = ExtTriggerCondition(enemyWeaponInfo._weaponType, _characterType == CharacterType._Policeman, out bool isFire);
+            if (condition) //если пуля, то на полицейского не действует, а для хулигана всегда true
             {
-                if (enemy.SetDamage)
-                {                   
-                    RecieveDamageAction.Invoke(otherWeapon); //melee damage
-                }
-                else
+                if (isAlive)
                 {
-                    //не понимаю, как поставить нормальный триггер на одиночное срабатывание
-                    if (oneShootDamage != nextShoot && type == WeaponInfo.WeaponType.Fire)
+                    if (isFire)
                     {
                         RecieveDamageAction.Invoke(otherWeapon); //fire damage
-                        oneShootDamage = nextShoot;
                     }
-                }               
-            }
-            enemyWeapon = otherWeapon;
+                    else
+                    {
+                        if (enemyWeaponInfo.WeaponOwner.SetAttack)
+                        {
+                            enemyWeaponInfo.WeaponOwner.SetAttack = false;
+                            RecieveDamageAction.Invoke(otherWeapon); //melee damage
+                        }
+                    }
+                }                                    
+            }           
         }
     }
-    
+    public virtual void OnTriggerExit(Collider otherWeapon)
+    {
+        if (enemyWeaponInfo)
+        {
+            enemyWeaponInfo = null;
+        }
+    }
     void OnDamageRecieve(Collider weapon)
     {
         WeaponInfo weaponInfo = weapon.GetComponent<WeaponInfo>();
         if (weaponInfo != null)
         {
-            Debug.Log($"{weaponInfo.WOwner.gameObject.name} damage To {name} by {weaponInfo.wName}");
-            SetHealth(weaponInfo.wDamage);
+            Debug.Log($"{weaponInfo.WeaponOwner.gameObject.name} damage To {name} by {weaponInfo._weaponName}");
+            SetHealth(weaponInfo._weaponDamage);
         }
     }
-
-    public virtual void OnTriggerExit(Collider otherWeapon)
-    {
-        enemyWeapon = null;
-        oneShootDamage = !nextShoot;
-    }
+    
     public void SetHealth(float damageValue)
     {
         _health -= damageValue;
         hpSlider.value = MaxHealth - _health;
+        _healthIndicator.text = _health.ToString();
         if (_health <= 0)
         {
             _animator.SetBool(p_die, true);
+            isAlive = false;
             Debug.Log(name + "  is die");
         }
     }
-    
-    //public void SetHealth(AnimationManager enemy, float damageValue)
-    //{
-    //    enemy._health -= damageValue;
-    //    enemy.hpSlider.value = enemy.MaxHealth - enemy._health;
-    //    if (enemy._health <= 0) 
-    //    {
-    //        enemy._animator.SetBool(p_die, true);
-    //        Debug.Log(enemy.name + "  is die");
-    //    }
-    //}
 
     void Update()
     {
@@ -143,12 +142,43 @@ public abstract class AnimationManager : MonoBehaviour
     {
         if (Input.GetKeyDown(_hitKey))
         {
-            _animator.SetTrigger(p_hit);
-        }
+            SetAttack = false;
+
+            StartCoroutine(_Hit());
+        }       
         _animator.SetBool(p_hitting, Input.GetKey(_hitKey));
 
         _animator.transform.localEulerAngles = Vector3.zero; //Вопрос, почему меняется угол при возвращении к Idle
 
+    }
+    private IEnumerator _Hit()
+    {
+        _animator.SetTrigger(p_hit);
+        yield return new WaitUntil(() => _animator.GetCurrentAnimatorClipInfo(0)[0].clip.name == clipHitName);
+        SetAttack = true;
+        if (Input.GetKey(_hitKey))
+        {
+            while (Input.GetKey(_hitKey))
+            {
+                SetAttack = true;
+
+                yield return new WaitForSeconds(_animator.GetCurrentAnimatorStateInfo(0).length / 2);
+                if (SetAttack)
+                {
+                    SetAttack = false;
+                }
+                yield return null;
+            }
+        }
+        else
+        {
+            yield return new WaitForSeconds(_animator.GetCurrentAnimatorStateInfo(0).length);
+            if (SetAttack)
+            {
+                SetAttack = false;
+                yield break;
+            }
+        }
     }
 
     public void Move()
