@@ -3,8 +3,9 @@ using static GameManager;
 
 public class HooliganController : CharacterController
 {
-    protected override void CharacterInit()
+    public override void CharacterInit()
     {
         _characterType = CharacterType._Hooligan;
+        SetAI(this._characterType);
     }
 }

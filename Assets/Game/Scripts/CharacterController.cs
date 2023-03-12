@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.UI;
 using static GameManager;
 using static WeaponInfo;
@@ -8,18 +9,18 @@ using static WeaponInfo;
 public abstract class CharacterController : MonoBehaviour
 {
     protected GameManager _GM { get { return GameManager.GM; }}
-    protected static int p_speed = Animator.StringToHash("Speed");
-    protected static int p_hit = Animator.StringToHash("IsHit");
-    protected static int p_hitting = Animator.StringToHash("IsHitting");
-    protected static int p_die = Animator.StringToHash("IsDie");
+    public static int p_speed = Animator.StringToHash("Speed");
+    public static int p_hit = Animator.StringToHash("IsHit");
+    public static int p_hitting = Animator.StringToHash("IsHitting");
+    public static int p_die = Animator.StringToHash("IsDie");
 
-    protected static string clipHitName = "m_melee_combat_attack_A";
+    public static string clipHitName = "m_melee_combat_attack_A";
 
     public Animator _animator;
     protected CharacterType _characterType;
     public float _speedAnim; //скорость анимации
     protected float _speedMult; //множитель скорости для режима Shift
-    protected float _acceleration; //ускорение 0..1
+    public float _acceleration { get; private set; } //ускорение 0..1
     public float _motionSpeed = 1; //скорость движения и вращения
     public float transitionTimeUp; //время ускорения
     public float transitionTimeDown; //время замедления
@@ -40,11 +41,11 @@ public abstract class CharacterController : MonoBehaviour
     private Text _healthIndicator;
     public Action<Collider> RecieveDamageAction; //в принципе можно обойтись без Action
     
-    private bool SetAttack; //true, когда срабатывает анимация атаки
-    private bool isAlive = true;
+    public bool setAttack { get; private set; } //true, когда срабатывает анимация атаки
+    public bool isAlive { get; private set; }
 
+    protected AiController AI;
 
-    //Вопрос, как перейти из AnyState к смерти
     public static bool ExtTriggerCondition(WeaponType weaponType, bool isPolice, out bool isFire)
     {
         isFire = weaponType == WeaponType.Fire;
@@ -59,12 +60,33 @@ public abstract class CharacterController : MonoBehaviour
         hpSlider.maxValue = MaxHealth;
         _healthIndicator = hpSlider.transform.Find("HP").GetComponent<Text>();
         _healthIndicator.text = MaxHealth.ToString();
+        isAlive = true;
         CharacterInit();
     }
-    protected virtual void CharacterInit()
+    public virtual void CharacterInit()
     {
     }
+    private IEnumerator ExecuteNextFrame()
+    {
+        yield return new WaitForEndOfFrame();
+        AI.Execute(_GM.AIOn);
+    }
+    protected void SetAI(CharacterType _characterType)
+    {
+        this.AI = null;
+        _acceleration = 0;
 
+        if (_characterType != GM.MyCharacterIs)
+        {
+            this.AI = GetComponent<AiController>();
+            StartCoroutine(ExecuteNextFrame());
+
+        }
+        else
+        {
+            GM.enemyTarget = this.transform;
+        }
+    }
     public virtual void OnTriggerEnter(Collider otherWeapon)
     {
         if (otherWeapon != selfWeapon && otherWeapon.tag == "Weapon")
@@ -81,9 +103,9 @@ public abstract class CharacterController : MonoBehaviour
                     }
                     else
                     {
-                        if (enemyWeaponInfo.WeaponOwner.SetAttack)
+                        if (enemyWeaponInfo.WeaponOwner.setAttack)
                         {
-                            enemyWeaponInfo.WeaponOwner.SetAttack = false;
+                            enemyWeaponInfo.WeaponOwner.setAttack = false;
                             RecieveDamageAction.Invoke(otherWeapon); //melee damage
                         }
                     }
@@ -123,16 +145,17 @@ public abstract class CharacterController : MonoBehaviour
 
     void Update()
     {
+        if (AI == null || !AI.isActive)
+        {
+            _speedMult = Input.GetKey(_turboKey) ? 2 : 1;
 
-        _speedMult = Input.GetKey(_turboKey) ? 2 : 1;
+            Move();
+            Rotate();
+            Shoot();
+            Hit();
 
-        Move();
-        Rotate();
-        Shoot();
-        Hit();
-
-        _animator.SetFloat(p_speed, _speedAnim * _speedMult * _acceleration);
-
+            _animator.SetFloat(p_speed, _speedAnim * _speedMult * _acceleration);
+        }
     }
     public virtual void Shoot()
     {
@@ -142,7 +165,7 @@ public abstract class CharacterController : MonoBehaviour
     {
         if (Input.GetKeyDown(_hitKey))
         {
-            SetAttack = false;
+            setAttack = false;
 
             StartCoroutine(_Hit());
         }       
@@ -154,18 +177,20 @@ public abstract class CharacterController : MonoBehaviour
     private IEnumerator _Hit()
     {
         _animator.SetTrigger(p_hit);
-        yield return new WaitUntil(() => _animator.GetCurrentAnimatorClipInfo(0)[0].clip.name == clipHitName);
-        SetAttack = true;
+        //yield return new WaitUntil(() => _animator.GetCurrentAnimatorClipInfo(0)[0].clip.name == clipHitName);
+        yield return new WaitUntil(() => _animator.GetCurrentAnimatorStateInfo(0).IsName(clipHitName));
+
+        setAttack = true;
         if (Input.GetKey(_hitKey))
         {
             while (Input.GetKey(_hitKey))
             {
-                SetAttack = true;
+                setAttack = true;
 
                 yield return new WaitForSeconds(_animator.GetCurrentAnimatorStateInfo(0).length / 2);
-                if (SetAttack)
+                if (setAttack)
                 {
-                    SetAttack = false;
+                    setAttack = false;
                 }
                 yield return null;
             }
@@ -173,9 +198,9 @@ public abstract class CharacterController : MonoBehaviour
         else
         {
             yield return new WaitForSeconds(_animator.GetCurrentAnimatorStateInfo(0).length);
-            if (SetAttack)
+            if (setAttack)
             {
-                SetAttack = false;
+                setAttack = false;
                 yield break;
             }
         }
@@ -207,7 +232,7 @@ public abstract class CharacterController : MonoBehaviour
             transform.Rotate(transform.up, 100 * _motionSpeed * _speedMult * Time.deltaTime);
         }
     }
-    protected IEnumerator SetAccelerate(bool increase)
+    public IEnumerator SetAccelerate(bool increase)
     {
         float time = 0;
         float start = _acceleration;
@@ -220,5 +245,8 @@ public abstract class CharacterController : MonoBehaviour
         }
         _acceleration = end;
     }
-
+    public void SetAttack(bool attack)
+    {
+        setAttack = attack;
+    }
 }

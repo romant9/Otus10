@@ -9,9 +9,10 @@ public class PolicemanController : CharacterController
 
     protected static string clipShootName = "m_pistol_shoot";
 
-    protected override void CharacterInit()
+    public override void CharacterInit()
     {
         _characterType = CharacterType._Policeman;
+        SetAI(this._characterType);
     }
 
     public override void Shoot()
