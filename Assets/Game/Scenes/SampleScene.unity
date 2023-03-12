@@ -687,7 +687,7 @@ GameObject:
   - component: {fileID: 473980653}
   - component: {fileID: 473980654}
   m_Layer: 5
-  m_Name: Toggle
+  m_Name: ToggleAI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1470,7 +1470,7 @@ GameObject:
   - component: {fileID: 865272677}
   - component: {fileID: 865272676}
   m_Layer: 5
-  m_Name: Button (Legacy)
+  m_Name: ButtonHelp
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

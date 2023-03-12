@@ -39,7 +39,6 @@ public abstract class CharacterController : MonoBehaviour
 
     private float _health;
     private Text _healthIndicator;
-    public Action<Collider> RecieveDamageAction; //в принципе можно обойтись без Action
     
     public bool setAttack { get; private set; } //true, когда срабатывает анимация атаки
     public bool isAlive { get; private set; }
@@ -56,37 +55,33 @@ public abstract class CharacterController : MonoBehaviour
     public void Start()
     {
         _health = MaxHealth;
-        RecieveDamageAction += OnDamageRecieve;
         hpSlider.maxValue = MaxHealth;
         _healthIndicator = hpSlider.transform.Find("HP").GetComponent<Text>();
         _healthIndicator.text = MaxHealth.ToString();
         isAlive = true;
         CharacterInit();
     }
-    public virtual void CharacterInit()
-    {
-    }
-    private IEnumerator ExecuteNextFrame()
-    {
-        yield return new WaitForEndOfFrame();
-        AI.Execute(_GM.AIOn);
-    }
-    protected void SetAI(CharacterType _characterType)
+    public virtual void CharacterInit() //сброс и назначение ролей персонажам. Игрок или AI
     {
         this.AI = null;
         _acceleration = 0;
 
-        if (_characterType != GM.MyCharacterIs)
-        {
-            this.AI = GetComponent<AiController>();
-            StartCoroutine(ExecuteNextFrame());
-
-        }
-        else
+        if (_characterType == GM.MyCharacterIs)
         {
             GM.enemyTarget = this.transform;
         }
+        else
+        {
+            this.AI = GetComponent<AiController>();
+            StartCoroutine(ExecuteNextFrame());
+        }
     }
+    private IEnumerator ExecuteNextFrame()
+    {
+        yield return new WaitForEndOfFrame(); //ждем инициализации GM.enemyTarget
+        AI.Execute(_GM.AIOn);
+    }
+
     public virtual void OnTriggerEnter(Collider otherWeapon)
     {
         if (otherWeapon != selfWeapon && otherWeapon.tag == "Weapon")
@@ -99,14 +94,14 @@ public abstract class CharacterController : MonoBehaviour
                 {
                     if (isFire)
                     {
-                        RecieveDamageAction.Invoke(otherWeapon); //fire damage
+                        OnDamageRecieve(otherWeapon); //fire damage
                     }
                     else
                     {
                         if (enemyWeaponInfo.WeaponOwner.setAttack)
                         {
                             enemyWeaponInfo.WeaponOwner.setAttack = false;
-                            RecieveDamageAction.Invoke(otherWeapon); //melee damage
+                            OnDamageRecieve(otherWeapon); //melee damage
                         }
                     }
                 }                                    
@@ -177,7 +172,8 @@ public abstract class CharacterController : MonoBehaviour
     private IEnumerator _Hit()
     {
         _animator.SetTrigger(p_hit);
-        //yield return new WaitUntil(() => _animator.GetCurrentAnimatorClipInfo(0)[0].clip.name == clipHitName);
+        //yield return new WaitUntil(() => _animator.GetCurrentAnimatorClipInfo(0)[0].clip.name == clipHitName); 
+        //один из вариантов
         yield return new WaitUntil(() => _animator.GetCurrentAnimatorStateInfo(0).IsName(clipHitName));
 
         setAttack = true;

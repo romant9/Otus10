@@ -12,7 +12,7 @@ public class PolicemanController : CharacterController
     public override void CharacterInit()
     {
         _characterType = CharacterType._Policeman;
-        SetAI(this._characterType);
+        base.CharacterInit();
     }
 
     public override void Shoot()
@@ -30,7 +30,7 @@ public class PolicemanController : CharacterController
 
         _animator.SetTrigger(p_shoot);
 
-        yield return new WaitUntil(() => _animator.GetCurrentAnimatorClipInfo(0)[0].clip.name == clipShootName);
+        yield return new WaitUntil(() => _animator.GetNextAnimatorStateInfo(0).IsName(clipShootName));
         if (Input.GetKey(_shootKey))
         {
             while (Input.GetKey(_shootKey))
