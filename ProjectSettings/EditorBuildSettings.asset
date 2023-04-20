@@ -4,5 +4,20 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Game/Scenes/levels/MainMenu.unity
+    guid: 1cf16c7c7e0f7bb4e8fd69973bfbde84
+  - enabled: 1
+    path: Assets/Game/Scenes/levels/SceneDevelop.unity
+    guid: 3ed8fae344c2a9c4c92cafe104c7004d
+  - enabled: 1
+    path: Assets/Game/Scenes/levels/PvP.unity
+    guid: e333ccecd3404d44482c582ac1811c87
+  - enabled: 1
+    path: Assets/Game/Scenes/levels/Duel.unity
+    guid: 3095fc5ea3cd01e4db0a46f9ab00dcc3
+  - enabled: 1
+    path: Assets/Game/Scenes/levels/Wave.unity
+    guid: 2c8a5cb27807d934a872d95e9eb4e3e5
   m_configObjects: {}

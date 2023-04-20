@@ -1,11 +1,23 @@
+using static Bloodymary.Game.GameSettings;
 
-using static GameManager;
-
-public class HooliganController : CharacterController
+namespace Bloodymary.Game
 {
-    public override void CharacterInit()
+    public class HooliganController : CharacterController
     {
-        _characterType = CharacterType._Hooligan;
-        base.CharacterInit();
+        protected override void Start()
+        {
+            _characterType = CharacterType._Hooligan;
+            base.Start();
+        }
+
+        public override void CharacterInit()
+        {
+            _characterType = CharacterType._Hooligan;
+            _currentControlTheme = GSettings.RightPlayerTheme;
+
+            base.CharacterInit();
+        }
     }
 }
+
+

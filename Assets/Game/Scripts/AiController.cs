@@ -1,149 +1,213 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.AI;
 
-public class AiController : MonoBehaviour
+namespace Bloodymary.Game
 {
-    private GameManager _GM { get { return GameManager.GM; } }
-    private CharacterController _CurrentCharacterController;
-    private CharacterController _TargetCharacterController; //»грок, €вл€ющийс€ целью дл€ AI
-    public bool isActive; //включаетс€ однократно после инициализации _TargetCharacterController
-
-    private float distance;
-    private bool accelerate;
-
-    private Coroutine _MoveCoroutine; //альтернативный метод движени€ - карутин через Update
-
-    void Start()
+    public class AiController : MonoBehaviour
     {
-        _CurrentCharacterController = GetComponent<CharacterController>();
-    }
+        private CharacterController _CurrentCharacterController;
+        private CharacterController _TargetCharacterController; //»грок, €вл€ющийс€ целью дл€ AI
+        public bool isActive;
 
-    void Update()
-    {
-        if (!isActive || !_CurrentCharacterController.isAlive) 
-        { 
-            StopAllCoroutines();
-            return;
-        }
+        private float distance;
+        private bool accelerate;        
 
-        distance = Vector3.Distance(transform.position, _TargetCharacterController.transform.position);
+        private Coroutine _MoveCoroutine; //альтернативный метод движени€ - карутин через Update
 
-        //MoveToUpdate();
-    }
-    
+        private NavMeshAgent _NavMeshAgent;
 
-    public void Execute(bool aiOn)
-    {
-        if (aiOn)
-        {
-            _TargetCharacterController = _GM.enemyTarget.GetComponent<CharacterController>();
-
-            isActive = true;
-            StartCoroutine(AIRotate());
-            StartCoroutine(AIMoveTo());
-        }
-        else
-        {
-            accelerate = false;
-            isActive = false;
-            StopAllCoroutines();
-        }
+        float stopDistance = 1.8f;
         
-        //_MoveCoroutine = StartCoroutine(MoveToAlt());
-    }
-    private IEnumerator AIRotate()
-    {
-        while (_CurrentCharacterController.isAlive)
+        
+        void Start()
         {
-            transform.LookAt(_GM.enemyTarget,Vector3.up);
-            yield return null;
-        }
-    }  
+            _CurrentCharacterController = GetComponent<CharacterController>();
+            _NavMeshAgent = GetComponent<NavMeshAgent>();
+            if (_NavMeshAgent)
+            {
+                _NavMeshAgent.speed = _CurrentCharacterController._speedMotion;
+                _NavMeshAgent.stoppingDistance = stopDistance;
 
-    private IEnumerator AIMoveTo()
-    {
-        while (_CurrentCharacterController.isAlive)
+            }
+        }
+
+        void Update()
         {
+            if (!isActive ) return;
+
             distance = Vector3.Distance(transform.position, _TargetCharacterController.transform.position);
-            float accelerateValue = _CurrentCharacterController._acceleration;
-
-            _CurrentCharacterController._animator.SetFloat(CharacterController.p_speed, _CurrentCharacterController._speedAnim * accelerateValue);
-
-            if (distance > 1.2f)
-            {
-                if (!accelerate)
-                {
-                    accelerate = true;
-                    StartCoroutine(_CurrentCharacterController.SetAccelerate(accelerate));
-                }
-            }
-            else
-            {
-                if (accelerate)
-                {
-                    accelerate = false;
-                    StartCoroutine(_CurrentCharacterController.SetAccelerate(accelerate));
-                }               
-            }
-
-            if (accelerateValue > 0)
-            {
-                transform.position += transform.forward * _CurrentCharacterController._motionSpeed * .8f * _CurrentCharacterController._acceleration * Time.deltaTime;
-            }
-            else
-            {
-                yield return new WaitForSeconds(_GM.timeWaitHit);
-                if (_TargetCharacterController.isAlive && distance <= 1) StartCoroutine(AIHit());
-            }
-            yield return null;
         }
-    }
 
-    private IEnumerator AIHit()
-    {
-        _CurrentCharacterController.SetAttack(false);
+        public void Execute(bool aiOn)
+        {
+            if (aiOn && _CurrentCharacterController.isAlive && _CurrentCharacterController.isAI)
+            {
+                _TargetCharacterController = GameManager.GManager.Player.GetComponent<CharacterController>();
+
+                isActive = true;
+                //StartCoroutine(AIRotate());
+                _NavMeshAgent.isStopped = false;
+                StartCoroutine(AIMoveNavAgent());
+            }
+            else
+            {
+                accelerate = false;
+                isActive = false;
+                //StartCoroutine(_CurrentCharacterController.SetAccelerate(accelerate));
+                _CurrentCharacterController._animator.SetFloat(GameDataHelper.p_speed, 0);
+                _NavMeshAgent.isStopped = true;
+                StopAllCoroutines();
+            }
+        }
+
+        private IEnumerator AIMoveNavAgent()
+        {
+            while (isActive)
+            {
+                distance = Vector3.Distance(transform.position, _TargetCharacterController.transform.position);
+                _NavMeshAgent.destination = _TargetCharacterController.transform.position;
+                _CurrentCharacterController._animator.SetFloat(GameDataHelper.p_speed, _CurrentCharacterController._speedAnim 
+                                                                * _NavMeshAgent.velocity.normalized.magnitude);
+
+                if (distance < Random.Range(-.5f,.5f) + stopDistance)
+                { 
+                    yield return new WaitForSeconds(GameSettings.GSettings.timeWaitHit);
+                    if (_TargetCharacterController.isAlive) StartCoroutine(AIHit());
+                }
+                yield return null;
+            }
+        }
         
-        _CurrentCharacterController._animator.SetTrigger(CharacterController.p_hit);
-        yield return new WaitUntil(() => _CurrentCharacterController._animator.GetCurrentAnimatorStateInfo(0).IsName(CharacterController.clipHitName));
-
-        _CurrentCharacterController.SetAttack(true);
-
-        yield return new WaitForSeconds(_CurrentCharacterController._animator.GetCurrentAnimatorStateInfo(0).length);
-
-        if (_CurrentCharacterController.setAttack)
+        private IEnumerator AIHit()
         {
             _CurrentCharacterController.SetAttack(false);
-            yield break;
-        }
-    }
 
-    //не используетс€
-    #region temp
-    private IEnumerator MoveToAlt()
-    {
-        while (_CurrentCharacterController.isAlive)
-        {
-            transform.position += transform.forward * _TargetCharacterController._motionSpeed * Time.deltaTime;
-            yield return null;
-        }
-        _MoveCoroutine = null;
-    }
+            _CurrentCharacterController._animator.SetTrigger(GameDataHelper.p_hit);
+            yield return new WaitUntil(() => _CurrentCharacterController._animator.GetCurrentAnimatorStateInfo(0).IsName(GameDataHelper.clipHitName));
 
-    private void MoveToUpdate()
-    {
-        if (distance > 2)
-        {
-            if (_MoveCoroutine == null)
-                _MoveCoroutine = StartCoroutine(MoveToAlt());
-        }
-        else
-        {
-            if (_MoveCoroutine != null)
+            _CurrentCharacterController.SetAttack(true);
+
+            yield return new WaitForSeconds(_CurrentCharacterController._animator.GetCurrentAnimatorStateInfo(0).length);
+
+            if (_CurrentCharacterController.setAttack)
             {
-                StopCoroutine(_MoveCoroutine);
-                _MoveCoroutine = null;
+                _CurrentCharacterController.SetAttack(false);
+                yield break;
             }
         }
+
+        private void OnDestroy()
+        {
+            StopAllCoroutines();
+        }
+
+
+        //не используетс€
+        //private void OnTriggerStay(Collider collision)
+        //{
+        //    if (isActive && collision.gameObject.CompareTag("Player"))
+        //    {
+        //        _NavMeshAgent.speed = 0;
+        //    }
+
+        //}
+
+        //private void OnTriggerExit(Collider collision)
+        //{
+        //    if (isActive && collision.gameObject.CompareTag("Player"))
+        //    {
+        //        _NavMeshAgent.speed = _CurrentCharacterController._speedMotion;
+        //    }
+        //}
+        #region temp
+        private IEnumerator AIRotate()
+        {
+            while (isActive)
+            {
+                transform.LookAt(_TargetCharacterController.transform.position, Vector3.up);
+
+                yield return null;
+            }
+        }
+
+        private IEnumerator AIMoveTo()
+        {
+            while (isActive)
+            {
+                distance = Vector3.Distance(transform.position, _TargetCharacterController.transform.position);
+                float accelerateValue = _CurrentCharacterController._acceleration;
+                _CurrentCharacterController._animator.SetFloat(GameDataHelper.p_speed, _CurrentCharacterController._speedAnim * accelerateValue);
+
+                if (distance > 1.2f)
+                {
+                    if (!accelerate)
+                    {
+                        accelerate = true;
+                        StartCoroutine(_CurrentCharacterController.SetAccelerate(accelerate));
+                    }
+                }
+                else
+                {
+                    if (accelerate)
+                    {
+                        accelerate = false;
+                        StartCoroutine(_CurrentCharacterController.SetAccelerate(accelerate));
+                    }
+                }
+
+                if (accelerateValue > 0)
+                {
+
+                    //_NavMeshAgent.destination = _TargetCharacterController.transform.position;
+                    transform.position += transform.forward * _CurrentCharacterController._speedMotion * .8f * _CurrentCharacterController._acceleration * Time.deltaTime;
+                }
+                else
+                {
+                    yield return new WaitForSeconds(GameSettings.GSettings.timeWaitHit);
+                    if (_TargetCharacterController.isAlive && distance <= 1) StartCoroutine(AIHit());
+                }
+                yield return null;
+            }
+        }
+
+        private IEnumerator MoveToAlt()
+        {
+            while (_CurrentCharacterController.isAlive)
+            {
+                transform.position += transform.forward * _TargetCharacterController._speedMotion * Time.deltaTime;
+                yield return null;
+            }
+            _MoveCoroutine = null;
+        }
+
+        private void MoveToUpdate()
+        {
+            if (distance > 2)
+            {
+                if (_MoveCoroutine == null)
+                    _MoveCoroutine = StartCoroutine(MoveToAlt());
+            }
+            else
+            {
+                if (_MoveCoroutine != null)
+                {
+                    StopCoroutine(_MoveCoroutine);
+                    _MoveCoroutine = null;
+                }
+            }
+        }
+        #endregion
     }
-    #endregion
+
+    public static class AiUtils
+    {
+        public enum CollisionIndicatorType
+        {
+            Left,
+            Right,
+            Forward
+        }
+    }
 }
+

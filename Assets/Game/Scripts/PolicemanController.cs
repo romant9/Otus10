@@ -1,57 +1,53 @@
 using System.Collections;
 using UnityEngine;
-using static GameManager;
+using static Bloodymary.Game.GameSettings;
 
-public class PolicemanController : CharacterController
+
+namespace Bloodymary.Game
 {
-    protected static int p_shoot = Animator.StringToHash("IsShoot");
-    protected static int p_shooting = Animator.StringToHash("IsShooting");
-
-    protected static string clipShootName = "m_pistol_shoot";
-
-    public override void CharacterInit()
+    public class PolicemanController : CharacterController
     {
-        _characterType = CharacterType._Policeman;
-        base.CharacterInit();
-    }
-
-    public override void Shoot()
-    {
-        if (Input.GetKeyDown(_shootKey))
+        protected override void Start()
         {
-            StartCoroutine(ShootBullet());
+            _characterType = CharacterType._Policeman;
+            base.Start();
         }
-        _animator.SetBool(p_shooting, Input.GetKey(_shootKey));
-    }
-
-    private IEnumerator ShootBullet()
-    {
-        InitShoot();
-
-        _animator.SetTrigger(p_shoot);
-
-        yield return new WaitUntil(() => _animator.GetNextAnimatorStateInfo(0).IsName(clipShootName));
-        if (Input.GetKey(_shootKey))
+        public override void CharacterInit()
         {
-            while (Input.GetKey(_shootKey))
-            {
-                yield return new WaitForSeconds(_animator.GetCurrentAnimatorStateInfo(0).length / 2);
-                InitShoot();
-                yield return null;
+            _characterType = CharacterType._Policeman;
+            _currentControlTheme = GSettings.LeftPlayerTheme;
+
+            base.CharacterInit();
+        }
+
+        public override void Shoot()
+        {
+            if (Input.GetKeyDown(_currentControlTheme._attackKey))
+            {               
+                StartCoroutine(ShootBullet());
             }
+            _animator.SetBool(GameDataHelper.p_shooting, Input.GetKey(_currentControlTheme._attackKey));
         }
-        else
-        {
-            yield return new WaitForSeconds(_animator.GetCurrentAnimatorStateInfo(0).length);            
-        }
-    }
-    private void InitShoot()
-    {
-        Transform bullet = Instantiate(_GM._bullet.gameObject, selfWeapon.transform).transform;
-        bullet.RotateAround(bullet.localPosition, bullet.right, 90);
-        bullet.localPosition = new Vector3(-.12f, 0, .25f);
 
-        var bulletFly = bullet.GetComponent<BulletFly>();
-        StartCoroutine(bulletFly.BulletInit(_GM._bullet._weaponDamage));
+        private IEnumerator ShootBullet()
+        {
+            currentWeapon.InitShoot();
+            _Inventory.ChangeWeaponCount(currentWeapon, -1);
+            CurrentUIData.ammunitionCount.text = _Inventory.GetWeaponCount(currentWeapon).ToString();
+            _animator.SetTrigger(GameDataHelper.p_shoot);
+
+            yield return new WaitWhile(() => _animator.GetCurrentAnimatorStateInfo(0).IsName(GameDataHelper.clipIdleName));
+            
+            while (Input.GetKey(_currentControlTheme._attackKey))
+            {
+                currentWeapon.InitShoot();
+                _Inventory.ChangeWeaponCount(currentWeapon, -1);
+                CurrentUIData.ammunitionCount.text = _Inventory.GetWeaponCount(currentWeapon).ToString();
+                yield return new WaitForSeconds(_animator.GetCurrentAnimatorStateInfo(0).length / 2);
+            }
+
+            if (_Inventory.GetWeaponCount(currentWeapon) < 1) CheckAmmunition();
+        }
     }
 }
+
