@@ -343,7 +343,7 @@ namespace Bloodymary.Game
             setAttack = true;
             
             while (Input.GetKey(_currentControlTheme._attackKey))
-            {
+            {               
                 setAttack = true;
                 yield return new WaitForSeconds(_animator.GetCurrentAnimatorStateInfo(0).length / 2);
                 setAttack = false;

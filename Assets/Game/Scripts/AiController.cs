@@ -17,7 +17,7 @@ namespace Bloodymary.Game
 
         private NavMeshAgent _NavMeshAgent;
 
-        float stopDistance = 1.8f;
+        public float stopDistance = 1.2f;
         
         
         void Start()
@@ -43,6 +43,8 @@ namespace Bloodymary.Game
         {
             if (aiOn && _CurrentCharacterController.isAlive && _CurrentCharacterController.isAI)
             {
+                //_CurrentCharacterController.StopAttack();
+                _CurrentCharacterController._animator.SetBool(GameDataHelper.p_hitting, false);
                 _TargetCharacterController = GameManager.GManager.Player.GetComponent<CharacterController>();
 
                 isActive = true;

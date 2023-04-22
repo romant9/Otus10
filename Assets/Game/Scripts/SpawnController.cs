@@ -39,6 +39,7 @@ namespace Bloodymary.Game
         {
             StopAllCoroutines();
             DeleteCharacters();
+            EnemyPlacePoints.Clear();
             GManager.AIOn = false;
         }
 

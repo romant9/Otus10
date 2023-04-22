@@ -277,7 +277,7 @@ namespace Bloodymary.Game
             {
                 if (Input.GetKeyDown(KeyCode.Escape))
                 {
-                    AIPause(MManager.currentMenu != MenuType.Level);
+                    AIPause(MManager.currentMenu == MenuType.Level);
                 }
             }
         }
