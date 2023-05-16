@@ -16,6 +16,8 @@ namespace Bloodymary.Game
         public СharacterUIData _PolicemanUI; //глобальные UI Screen Space, отображаемый для живого игрока
         public СharacterUIData _HooliganUI;
         public Transform CharactersGroup;
+        public PlaySound SceneMusic; //Scene sounds effects
+        public SettingsSound _SettingsSound;
         public List<CharacterController> Characters { get; private set; }
         public CharacterType MyCharacterIs;
 
@@ -40,13 +42,13 @@ namespace Bloodymary.Game
             Characters = new List<CharacterController>();
 
             //временное решение. Для запуска сцен из редактора
-#region debug case
-            //if (GSettings == null)
-            //{
-            //    var settings = Resources.Load("GameSettings") as GameObject;
-            //    GSettings = Instantiate(settings).GetComponent<GameSettings>();
-            //}
-#endregion
+            #region debug case
+            if (GSettings == null)
+            {
+                var settings = Resources.Load("GameSettings") as GameObject;
+                Instantiate(settings).GetComponent<GameSettings>();
+            }
+            #endregion
         }
         private void Start()
         {
@@ -64,7 +66,9 @@ namespace Bloodymary.Game
                 string content = "Нажмите клавишу ПРОБЕЛ, чтобы начать...";
                 GameLog.ShowInfo(manualActivate, content);
                 StartCoroutine(WaitForPreInit());
-            }           
+            }
+
+            SceneMusic.PlaySoundEffect("MainTheme");
         }
 
         private void GetPlayerNames()
@@ -94,12 +98,11 @@ namespace Bloodymary.Game
             yield return new WaitUntil(() => Input.GetKeyDown(KeyCode.Space));
             string content = "Убей всех врагов";
             GameLog.ShowInfo(false, content);
-            Debug.Log("Убей всех врагов");
 
             //пока костыль
             if (Stats.levelName == "Wave")            
                 Spawn.Initialize(1); 
-            else
+            else if (Stats.levelName != "SceneDevelop")
                 AIOn = true;
             PreInit();
         }
@@ -116,10 +119,21 @@ namespace Bloodymary.Game
         public void AIOnSwitch(Toggle tg)
         {
             Text text = tg.transform.Find("Label").GetComponent<Text>();
-            AIOn = tg.isOn;
+            SetConditionFor(ref AIOn, tg.isOn);
             text.text = AIOn ? "AI выключить" : "AI включить";
 
             PreInit();
+        }
+
+        void SetConditionFor(ref bool changed, bool condition)
+        {
+            changed = condition;
+            PlayMusicTheme(condition);
+        }
+        void PlayMusicTheme(bool condition)
+        {
+            string musicTheme = condition ? "BattleTheme" : "MainTheme";
+            SceneMusic.PlaySoundEffect(musicTheme);
         }
 
         //GUI - ToggleAI (go = TogglePauseAI)
@@ -133,9 +147,10 @@ namespace Bloodymary.Game
         public void AIPauseToggle(Toggle tg)
         {
             Text text = tg.transform.Find("Label").GetComponent<Text>();
-            text.text = tg.isOn ? "ИИ остановить" : "ИИ запустить";
+            text.text = !tg.isOn ? "ИИ остановить" : "ИИ запустить";
 
             AIPause(!tg.isOn);
+            PlayMusicTheme(!tg.isOn);
         }
         void AIPause(bool stop)
         {
@@ -155,21 +170,21 @@ namespace Bloodymary.Game
             else Spawn.ResetSpawn();
 
             Spawn.isActive = tg.isOn;
+            PlayMusicTheme(tg.isOn);
         }
 
         public void SpawnCount(Slider tg)
         {
             Text text = tg.transform.parent.Find("Value").GetComponent<Text>();
             text.text = tg.value.ToString();
-            Spawn.spawnCount = (int)tg.value;
-
+            GSettings.spawnCount = (int)tg.value;
+            
         }
         public void SpawnInterval(Slider tg)
         {
             Text text = tg.transform.parent.Find("Value").GetComponent<Text>();
             text.text = tg.value.ToString();
             Spawn.timeInterval = (int)tg.value;
-
         }
 
         //GUI
@@ -232,7 +247,6 @@ namespace Bloodymary.Game
             } 
         }
 
-
         public void CheckVictory()
         {
             if (checkVictory)
@@ -244,6 +258,7 @@ namespace Bloodymary.Game
                         victoryStats = "Вы победили!";
                         checkVictory = false;
                         AIOn = false;
+                        SceneMusic.PlaySoundEffect("Victory");
                     }
 
                     if (!Player)
@@ -251,6 +266,7 @@ namespace Bloodymary.Game
                         victoryStats = "Вы проиграли!";
                         checkVictory = false;
                         AIOn = false;
+                        SceneMusic.PlaySoundEffect("Lose");
                     }
 
                     killed = Spawn.spawnCount - Characters.Count + 1;
@@ -261,13 +277,14 @@ namespace Bloodymary.Game
                     {
                         victoryStats = "Победил игрок  " + Characters.First().CurrentUIData.PlayerName;
                         checkVictory = false;
+                        SceneMusic.PlaySoundEffect("Victory");
                     }
 
                     killed = 1;
                 }
 
                 if (!checkVictory)
-                    MManager.SetCurrentMenu(MenuManager.MenuType.Level);
+                    MManager.SetCurrentMenu(MenuType.Level);
             }
         }
 
@@ -277,17 +294,12 @@ namespace Bloodymary.Game
             {
                 if (Input.GetKeyDown(KeyCode.Escape))
                 {
-                    AIPause(MManager.currentMenu == MenuType.Level);
+                    AIPause(MManager.currentMenu != MenuType.None);
                 }
             }
         }
 
-        //public СharacterUIData GetPlayerUIData(CharacterController player, bool AIOn)
-        //{
-        //    return player._characterType == (!AIOn ? CharacterType._Policeman : MyCharacterIs) ? _PolicemanUI : _HooliganUI;
-        //}
     }
-
 
 }
 

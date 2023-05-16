@@ -70,8 +70,9 @@ MonoBehaviour:
   player1Name: Player1
   player2Name: Player2
   timeWaitHit: 0.5
-  _difficulty: 1
+  difficultyType: 3
   spawnCount: 5
+  spawnInterval: 1
   bulletCount: 20
   grenadeCount: 10
   health: 30
@@ -81,3 +82,4 @@ MonoBehaviour:
   _PolicemanPrefab: {fileID: 4275460981475533142, guid: c20b9390f02e1c988bb5720fadc0eb7c, type: 3}
   _HooliganPrefab: {fileID: 4816448248622875858, guid: 3721399d4363f1ee8a87dcf026a5f6ae, type: 3}
   _graphicQuality: 5
+  audioMixer: {fileID: 24100000, guid: f041f749ae375134eae3f0fef3b9ccc3, type: 2}

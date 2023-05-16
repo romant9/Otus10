@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Bloodymary.Game
 {
@@ -10,14 +12,14 @@ namespace Bloodymary.Game
 
         public List<GameObject> menuList; //вносим в редакторе все menu из Canvas
 
-        //public MenuMain menuMain;
-        //public MenuSettings menuSettings;
-        //public MenuLevel menuLevel;
-        //public GameObject UILevel;
-
+        private GameManager GManager;
+        private PlaySound SceneMusic;
+        private string currentMusic;
 
         public MenuType currentMenu = MenuType.Main;
         private MenuType lastMenu;
+
+        PostProcessManager post;
 
         public enum MenuType
         {
@@ -33,14 +35,41 @@ namespace Bloodymary.Game
         }
         void Start()
         {
+            if (SceneManager.GetActiveScene().name != "MainMenu") post = Camera.main.GetComponent<PostProcessManager>();
+            lastMenu = MenuType.Level;
+
+            try
+            {
+                GManager = GetComponent<GameManager>();                
+            }
+            catch
+            {
+                GManager = null;
+            }
+
+            if (GManager) SceneMusic = GManager.SceneMusic;
         }
 
         public void SetCurrentMenu(MenuType menu)
         {
             GetMenu();
             var currentMenuGO = menuList.Find(x => x.GetComponent<Menu>().currentMenu == menu);
-            currentMenuGO.SetActive(true);
+            if (currentMenuGO) currentMenuGO.SetActive(true);
             currentMenu = menu;
+
+            if (post) post.ChangeFocus(currentMenu != MenuType.None);
+
+            if (SceneMusic && GManager.checkVictory)
+            {
+                PlayMusicTheme();
+            }
+
+        }
+        void PlayMusicTheme()
+        {
+            bool condition = currentMenu != MenuType.None;
+            string musicTheme = condition ? "Menu" : currentMusic;
+            SceneMusic.PlaySoundEffect(musicTheme);
         }
 
         public GameObject GetCurrentMenuGO(MenuType menu)
@@ -54,6 +83,8 @@ namespace Bloodymary.Game
             var currentMenuGO = menuList.Find(x => x == menu);
             currentMenuGO.SetActive(true);
             currentMenu = menu.GetComponent<Menu>().currentMenu;
+
+
         }
 
         private void GetMenu()
@@ -67,8 +98,15 @@ namespace Bloodymary.Game
 
         public void SetBack()
         {
-            SetCurrentMenu(currentMenu != MenuType.None ? lastMenu : MenuType.Level);
+            if (SceneMusic)
+            {
+                if (currentMenu == MenuType.None)
+                    currentMusic = SceneMusic.GetAudioClipName();
+            } 
 
+            SetCurrentMenu(currentMenu == MenuType.None ? lastMenu : MenuType.None);
+            //SetCurrentMenu(MenuType.None);
+            if (post) post.ChangeFocus(currentMenu != MenuType.None);
         }
 
         public void ExitGame()

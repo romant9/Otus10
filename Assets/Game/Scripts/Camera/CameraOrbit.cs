@@ -4,25 +4,25 @@ using UnityEngine;
 using static Bloodymary.Game.GameManager;
 
 namespace Bloodymary.Game
-{	
-	public class CameraOrbit : MonoBehaviour 
-	{
+{
+    public class CameraOrbit : MonoBehaviour
+    {
         Transform charFirst;
         Transform charSecond;
 
         Vector3 charSecondPos;
 
-		private Vector3 targetPoint;
-		private bool isReady;
+        private Vector3 targetPoint;
+        private bool isReady;
 
-        struct Position
-		{
-			public Vector2 camRotation;
-			public float camDistance;
+        public struct Position
+        {
+            public Vector2 camRotation;
+            public float camDistance;
             public float camDistanceAuto;
         }
 
-        Position m_position, m_target;
+        public Position m_position, m_target;
 
         public bool disableInterpolation;
 

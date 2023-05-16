@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
@@ -32,6 +33,7 @@ namespace Bloodymary.Game
 
         public void Initialize(int wave)
         {
+            spawnCount = GSettings.spawnCount;
             StartCoroutine(SpawnEnemy(wave));
         }
 

@@ -25,7 +25,8 @@ namespace Bloodymary.Game
         private Bullet _wBulletOrigin;
         private Bullet _wBulletCurrent;
 
-        private EffectRouter _FxEffect;
+        private EffectRouter Effects;
+        public AudioSource _audioSource { get; private set; }
 
         [ShowIf("_weaponType", WeaponType.Throw)]
         public float _damageRadius, _detonationTime;
@@ -39,12 +40,15 @@ namespace Bloodymary.Game
             {
                 _wBulletOrigin = transform.GetComponentInChildren<Bullet>(true);
             }
-            _FxEffect = transform.GetComponentInChildren<EffectRouter>();
+            Effects = transform.GetComponent<EffectRouter>();
+            _audioSource = transform.GetComponent<AudioSource>();
         }
 
         public void InitShoot()
         {
             if (!_wBulletOrigin) return;
+
+            Effects.PlaySound("Shoot");
 
             _wBulletCurrent = Instantiate(_wBulletOrigin.gameObject, _wBulletOrigin.transform.parent).GetComponent<Bullet>();
             _wBulletCurrent.SetOwner(this);
@@ -98,27 +102,28 @@ namespace Bloodymary.Game
             switch (type)
             {
                 case WeaponType.Fire:
-                    StartCoroutine(UIShootEffect());
+                    StartCoroutine(ShootEffect());
                     break;
                 case WeaponType.Throw:
-                    StartCoroutine(UIGrenadeffect());
+                    StartCoroutine(Grenadeffect());                   
                     break;
                 
             }        
         }
-        public IEnumerator UIShootEffect()
+        public IEnumerator ShootEffect()
         {
-            var effect = Instantiate(_FxEffect.Effect.gameObject, _FxEffect.Effect.parent);
+            var effect = Effects.GetInstanceFxEffect();
             effect.SetActive(true);
             yield return new WaitForSeconds(.2f);
             Destroy(effect);
         }
 
-        public IEnumerator UIGrenadeffect()
+        public IEnumerator Grenadeffect()
         {
-            var effect = Instantiate(_FxEffect.Effect.gameObject, _FxEffect.Effect.parent);
+            var effect = Effects.GetInstanceFxEffect();
             
             effect.SetActive(true);
+            Effects.PlaySound("Bomb");
 
             while (effect.transform.localScale.magnitude < 8)
             {
@@ -127,7 +132,13 @@ namespace Bloodymary.Game
             }
             yield return new WaitForSeconds(.1f);
             Destroy(effect);
+            foreach(var renderer in GetComponentsInChildren<MeshRenderer>())
+            {
+                renderer.enabled = false;
+            }
+            yield return new WaitForSeconds(Effects.GeAaudioSource().clip.length);
             Destroy(gameObject);
         }
+        
     }
 }

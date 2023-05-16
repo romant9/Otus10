@@ -39,14 +39,19 @@ namespace Bloodymary.Game
 
         public Health health;
 
-        public bool setAttack { get; private set; } //true, когда срабатывает анимаци€ атаки
+        public bool isAttack { get; private set; } //true, когда срабатывает анимаци€ атаки
         public bool isAlive { get; private set; }
-        public bool isAI;//{ get; private set; }
-        //protected AiController AI;
+        public bool isAI { get; private set; }
+
         public Action GetGrenadeDamage;
         private float throwMult = 1;
 
         private bool Initialized;
+
+        private int damageCount; //damage recieve
+
+        private EffectRouter _effects;
+
 
         public static bool ExtTriggerCondition(WeaponType weaponType, bool isPlayer, out bool isFire)
         {
@@ -63,6 +68,7 @@ namespace Bloodymary.Game
 
             _agent = GetComponent<NavMeshAgent>();
             _rigidbody = GetComponent<Rigidbody>();
+            _effects = GetComponent<EffectRouter>();
 
             _Inventory.Initialize();
             currentWeapon = WManager.SetupWeapon(_Inventory.weapons[0], _weaponPivot);
@@ -75,7 +81,7 @@ namespace Bloodymary.Game
         }
 
         public void CharacterPreInit()
-        {            
+        {
             CharacterInit();
             InitUIData();
             health.MaxHealth = GSettings.health;
@@ -138,7 +144,7 @@ namespace Bloodymary.Game
         }
 
         public virtual void OnTriggerEnter(Collider otherWeapon)
-        {           
+        {
             if (otherWeapon.CompareTag("Weapon"))
             {
                 enemyWeapon = otherWeapon.GetComponent<Weapon>();
@@ -147,30 +153,33 @@ namespace Bloodymary.Game
                     //bool condition = ExtTriggerCondition(enemyWeapon._weaponType, _characterType == CharacterType._Policeman, out bool isFire);
                     bool isFire = enemyWeapon._weaponType == WeaponType.Fire;
                     //сильно запутанно, но в целом: игрок принимает урон от »», а »» только от игрока
-                    bool condition =  !GManager.AIOn || !(enemyWeapon.WeaponOwner.transform != GManager.Player && this.transform != GManager.Player);
+                    bool condition = !GManager.AIOn || !(enemyWeapon.WeaponOwner.transform != GManager.Player && this.transform != GManager.Player);
                     if (condition)
                     {
                         if (isAlive)
                         {
                             if (isFire)
                             {
+                                damageCount++;
                                 OnDamageRecieve(otherWeapon); //fire damage
-                                if (otherWeapon.GetComponent<Bullet>()) 
+                                if (otherWeapon.GetComponent<Bullet>())
                                 {
                                     otherWeapon.GetComponent<Bullet>().DestroyBullet();
-                                } 
+                                }
                             }
                             else
                             {
-                                if (enemyWeapon.WeaponOwner.setAttack)
+                                if (enemyWeapon.WeaponOwner.isAttack)
                                 {
-                                    enemyWeapon.WeaponOwner.setAttack = false;
+                                    damageCount++;
+                                    enemyWeapon.WeaponOwner.SetAttack(false);
+
                                     OnDamageRecieve(otherWeapon); //melee damage
                                 }
-                            }                           
+                            }
                         }
                     }
-                }                               
+                }
             }
         }
         public virtual void OnTriggerExit(Collider otherWeapon)
@@ -183,20 +192,29 @@ namespace Bloodymary.Game
         void OnDamageRecieve(Collider wCollider)
         {
             Weapon weapon = wCollider.GetComponent<Weapon>();
+
             if (weapon != null)
             {
                 IsDamage(weapon);
+
+                Vector3 effectPos = GetComponent<Collider>().ClosestPoint(wCollider.transform.position);
+                effectPos += transform.forward * .25f;
+                Quaternion effectRot = Quaternion.LookRotation((weapon.WeaponOwner.transform.position - transform.position).normalized);
+
+                _effects.ExecuteParticlesEffect(effectPos, effectRot);
+
             }
         }
-        
+
         void OnDamageRecieveGrenade()
-        {          
+        {
             Weapon weapon = WManager.CurrentMassDamageWeapon;
 
             if (weapon != null)
             {
                 _animator.SetTrigger(GameDataHelper.p_grenadeDamage);
                 IsDamage(weapon);
+
             }
         }
         void IsDamage(Weapon weapon)
@@ -204,7 +222,24 @@ namespace Bloodymary.Game
             string content = $"{weapon.WeaponOwner.CurrentUIData.PlayerName} damage To {CurrentUIData.PlayerName} by {weapon._weaponName}";
             GManager.GameLog.ShowInfo(false, content);
             Debug.Log(content);
+
+            if (weapon._weaponType == WeaponType.Melee)
+            {
+                StartCoroutine(PlaySoundEffects(weapon));
+            }
+            else
+            {
+                _effects.PlaySound("GetDamage");
+            }
+
             SetHealth(weapon._weaponDamage);
+        }
+        IEnumerator PlaySoundEffects(Weapon weapon)
+        {
+            weapon._audioSource.Play();
+            yield return new WaitForSeconds(.25f);
+            _effects.PlaySound("GetDamage");
+            yield return null;
         }
         public void SetHealth(float damageValue)
         {
@@ -268,7 +303,7 @@ namespace Bloodymary.Game
         {
             if (Input.GetKeyDown(_currentControlTheme._attackKey))
             {
-                setAttack = false;
+                isAttack = false;
 
                 StartCoroutine(IHit());
             }
@@ -340,17 +375,17 @@ namespace Bloodymary.Game
             //один из вариантов
             yield return new WaitUntil(() => _animator.GetCurrentAnimatorStateInfo(0).IsName(GameDataHelper.clipHitName));
 
-            setAttack = true;
+            isAttack = true;
             
             while (Input.GetKey(_currentControlTheme._attackKey))
             {               
-                setAttack = true;
+                isAttack = true;
                 yield return new WaitForSeconds(_animator.GetCurrentAnimatorStateInfo(0).length / 2);
-                setAttack = false;
+                isAttack = false;
             }
             yield return new WaitForSeconds(_animator.GetCurrentAnimatorStateInfo(0).length);
             
-            setAttack = false;           
+            isAttack = false;           
         }
 
         public void Move()
@@ -414,21 +449,28 @@ namespace Bloodymary.Game
             float time = 0;
             float start = _acceleration;
             float end = increase ? 1 : 0;
+
+            //_effects.GeAaudioSource().loop = increase; //play sound step
+            //if (increase) _effects.PlaySound("Walk");
+
             while (increase ? _acceleration < 1 : _acceleration > 0)
             {
                 time += Time.deltaTime;
                 _acceleration = Mathf.Lerp(start, end, time / (increase ? transitionTimeUp : transitionTimeDown));
+ 
                 yield return null;
             }
             _acceleration = end;
         }
         public void SetAttack(bool attack)
         {
-            setAttack = attack;
+            isAttack = attack;
         }
         public void Death()
         {
             _animator.SetBool(GameDataHelper.p_die, true);
+            _effects.PlaySound("Die");
+
             isAlive = false;
             if (isAI) GetComponent<AiController>().Execute(GManager.AIOn);
             else 

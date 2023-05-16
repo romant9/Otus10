@@ -1,49 +1,44 @@
-using TMPro;
+using System;
+using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using static Bloodymary.Game.GameSettings;
 
 namespace Bloodymary.Game
 {
     public class MenuSettings : Menu
     {
-        public TextMeshProUGUI textMaxHealth;
-        public TextMeshProUGUI textDamageMult;
-        public TextMeshProUGUI textSpawnCount;
-        public GameObject GOSpawnCount;
+        [SerializeField] private List<SubMenuGroup> SettingSubMenu = new List<SubMenuGroup>();
 
         public override void Start()
         {
-            ActivateGOSpawnCount();
+            if (SettingSubMenu.Count > 1)
+            {
+                foreach (var menu in SettingSubMenu)
+                {
+                    menu.bt.onClick.AddListener(() => OnClick(menu.canvas));
+                }
+            }
+
         }
 
-        public void SetDifficulty(TMP_Dropdown dp)
+        void OnClick(CanvasGroup canvas)
         {
-            GSettings._difficulty = dp.value;
+            foreach (var menu in SettingSubMenu)
+            {
+                menu.canvas.alpha = 0;
+                menu.canvas.blocksRaycasts = false;
+            }
+            canvas.alpha = 1;
+            canvas.blocksRaycasts = true;
         }
 
-        public void SetMaxHealth(Slider sl)
+        [Serializable]
+        private class SubMenuGroup
         {
-            GSettings.health = sl.value;
-            textMaxHealth.text = sl.value.ToString();
-        }
+            public string name;
+            public Button bt;
+            public CanvasGroup canvas;
 
-        public void SetDamageMult(Slider sl)
-        {
-            GSettings.damageMult = sl.value/2;
-            textDamageMult.text = (sl.value/2).ToString();
-        }
-
-        public void SetSpawnCount(Slider sl)
-        {
-            GSettings.spawnCount = (int)sl.value;
-            textSpawnCount.text = sl.value.ToString();
-        }
-        public void ActivateGOSpawnCount()
-        {
-            var cond = SceneManager.GetActiveScene().buildIndex != 0 && (GSettings.gamePlayType == GamePlayType.Wave || GSettings.gamePlayType == GamePlayType.Test);
-            GOSpawnCount.SetActive(cond);
         }
     }
 }

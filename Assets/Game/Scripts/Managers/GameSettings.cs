@@ -1,11 +1,12 @@
 using UnityEngine;
+using UnityEngine.Audio;
 using static Bloodymary.Game.ControllerTheme;
 
 namespace Bloodymary.Game
 {
     public class GameSettings : MonoBehaviour
     {
-        public static GameSettings GSettings;
+        public static GameSettings GSettings { get; private set; }
 
         [Header("Control Theme Variants")]
         public ControllerTheme LeftPlayerTheme;
@@ -24,8 +25,9 @@ namespace Bloodymary.Game
         [Space(10)]
         [Header("Настройки сложности")]
         public float timeWaitHit = .5f; //пауза перед ударом
-        [Range(1, 3)]
-        public int _difficulty; //показатели ИИ основаны на показателях игрока и Сложности
+        //[Range(1, 3)]
+        //public int _difficulty; 
+        public DifficultyType difficultyType = DifficultyType.Custom; //показатели ИИ основаны на показателях игрока и Сложности
         public int spawnCount = 1; //число врагов в первой волне
         public int spawnInterval = 1; //интервал появления врагов
 
@@ -49,6 +51,7 @@ namespace Bloodymary.Game
         [Space(10)]
         [Range(1, 5)]
         public int _graphicQuality;
+        public AudioMixer audioMixer;
 
 
         public enum CharacterType //выбор персонажа, которым управляет игрок. Остальной будет AI
@@ -78,12 +81,20 @@ namespace Bloodymary.Game
         {
             Easy = 0,
             Normal = 1,
-            Hard = 2
+            Hard = 2,
+            Custom = 3
         }
 
         private void Awake()
         {
+            if (GSettings != null)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
             GSettings = this;
+            DontDestroyOnLoad(gameObject);
         }
 
         public void Start()

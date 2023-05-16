@@ -11,6 +11,7 @@ namespace Bloodymary.Game
         public bool isActive;
 
         private float distance;
+        private Quaternion direction;
         private bool accelerate;        
 
         private Coroutine _MoveCoroutine; //альтернативный метод движения - карутин через Update
@@ -18,8 +19,9 @@ namespace Bloodymary.Game
         private NavMeshAgent _NavMeshAgent;
 
         public float stopDistance = 1.2f;
-        
-        
+        Coroutine corRot;
+        Coroutine corHit;
+
         void Start()
         {
             _CurrentCharacterController = GetComponent<CharacterController>();
@@ -37,26 +39,41 @@ namespace Bloodymary.Game
             if (!isActive ) return;
 
             distance = Vector3.Distance(transform.position, _TargetCharacterController.transform.position);
+            direction = Quaternion.LookRotation((_TargetCharacterController.transform.position - transform.position).normalized);
+
+            _NavMeshAgent.speed = distance > stopDistance ? _CurrentCharacterController._speedMotion : 0;
+            _NavMeshAgent.radius = distance > stopDistance ? .4f : .2f;
+
+        }
+
+        private IEnumerator RotateTo()
+        {
+            while (true)
+            {
+                transform.rotation = Quaternion.Lerp(transform.rotation, direction, Time.deltaTime * 2);
+                yield return null;
+                corRot = null;
+            }
         }
 
         public void Execute(bool aiOn)
         {
             if (aiOn && _CurrentCharacterController.isAlive && _CurrentCharacterController.isAI)
             {
-                //_CurrentCharacterController.StopAttack();
                 _CurrentCharacterController._animator.SetBool(GameDataHelper.p_hitting, false);
                 _TargetCharacterController = GameManager.GManager.Player.GetComponent<CharacterController>();
 
                 isActive = true;
-                //StartCoroutine(AIRotate());
+
                 _NavMeshAgent.isStopped = false;
                 StartCoroutine(AIMoveNavAgent());
             }
             else
             {
                 accelerate = false;
+
                 isActive = false;
-                //StartCoroutine(_CurrentCharacterController.SetAccelerate(accelerate));
+
                 _CurrentCharacterController._animator.SetFloat(GameDataHelper.p_speed, 0);
                 _NavMeshAgent.isStopped = true;
                 StopAllCoroutines();
@@ -65,17 +82,22 @@ namespace Bloodymary.Game
 
         private IEnumerator AIMoveNavAgent()
         {
+            float rand = Random.Range(-.3f, .3f);
+            distance = Vector3.Distance(transform.position, _TargetCharacterController.transform.position);
+
             while (isActive)
-            {
-                distance = Vector3.Distance(transform.position, _TargetCharacterController.transform.position);
-                _NavMeshAgent.destination = _TargetCharacterController.transform.position;
-                _CurrentCharacterController._animator.SetFloat(GameDataHelper.p_speed, _CurrentCharacterController._speedAnim 
+            {                
+                _CurrentCharacterController._animator.SetFloat(GameDataHelper.p_speed, _CurrentCharacterController._speedAnim
                                                                 * _NavMeshAgent.velocity.normalized.magnitude);
 
-                if (distance < Random.Range(-.5f,.5f) + stopDistance)
-                { 
+                _NavMeshAgent.destination = _TargetCharacterController.transform.position;
+
+                if (distance < stopDistance)
+                {
+                    _CurrentCharacterController._animator.SetFloat(GameDataHelper.p_speed,0);
+                    if (corRot == null) { corRot = StartCoroutine(RotateTo()); }
                     yield return new WaitForSeconds(GameSettings.GSettings.timeWaitHit);
-                    if (_TargetCharacterController.isAlive) StartCoroutine(AIHit());
+                    if (_TargetCharacterController.isAlive && corHit == null) { corHit = StartCoroutine(AIHit()); }
                 }
                 yield return null;
             }
@@ -87,16 +109,10 @@ namespace Bloodymary.Game
 
             _CurrentCharacterController._animator.SetTrigger(GameDataHelper.p_hit);
             yield return new WaitUntil(() => _CurrentCharacterController._animator.GetCurrentAnimatorStateInfo(0).IsName(GameDataHelper.clipHitName));
-
-            _CurrentCharacterController.SetAttack(true);
-
-            yield return new WaitForSeconds(_CurrentCharacterController._animator.GetCurrentAnimatorStateInfo(0).length);
-
-            if (_CurrentCharacterController.setAttack)
-            {
-                _CurrentCharacterController.SetAttack(false);
-                yield break;
-            }
+            if (!_CurrentCharacterController.isAttack) _CurrentCharacterController.SetAttack(true);
+            yield return new WaitUntil(() => !_CurrentCharacterController._animator.GetCurrentAnimatorStateInfo(0).IsName(GameDataHelper.clipHitName));
+            _CurrentCharacterController.SetAttack(false);
+            corHit = null;
         }
 
         private void OnDestroy()
@@ -104,24 +120,6 @@ namespace Bloodymary.Game
             StopAllCoroutines();
         }
 
-
-        //не используется
-        //private void OnTriggerStay(Collider collision)
-        //{
-        //    if (isActive && collision.gameObject.CompareTag("Player"))
-        //    {
-        //        _NavMeshAgent.speed = 0;
-        //    }
-
-        //}
-
-        //private void OnTriggerExit(Collider collision)
-        //{
-        //    if (isActive && collision.gameObject.CompareTag("Player"))
-        //    {
-        //        _NavMeshAgent.speed = _CurrentCharacterController._speedMotion;
-        //    }
-        //}
         #region temp
         private IEnumerator AIRotate()
         {
@@ -160,8 +158,6 @@ namespace Bloodymary.Game
 
                 if (accelerateValue > 0)
                 {
-
-                    //_NavMeshAgent.destination = _TargetCharacterController.transform.position;
                     transform.position += transform.forward * _CurrentCharacterController._speedMotion * .8f * _CurrentCharacterController._acceleration * Time.deltaTime;
                 }
                 else
@@ -202,14 +198,5 @@ namespace Bloodymary.Game
         #endregion
     }
 
-    public static class AiUtils
-    {
-        public enum CollisionIndicatorType
-        {
-            Left,
-            Right,
-            Forward
-        }
-    }
 }
 

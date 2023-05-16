@@ -6,8 +6,7 @@ using TMPro;
 
 public class ButtonTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
 {
-    //public bool pointIn = false;
-    public TMP_Text txt;
+    private TMP_Text txt;
     bool isButton = false;
     bool isText = false;
 
@@ -30,23 +29,6 @@ public class ButtonTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         isText = txt;
     }
 
-    private void Update()
-    {
-        //if (isButton && isText)
-        //{
-        //    if (pointIn)
-        //    {
-
-        //        txt.enabled = true;
-
-        //    }
-        //    else
-        //    {
-        //        txt.enabled = false;
-        //    }
-
-        //}
-    }
 
     public IEnumerator ChangeSizeUp()
     {
@@ -79,11 +61,8 @@ public class ButtonTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        //pointIn = true;
         if (isButton && isText)
         {
-            txt.enabled = true;
-
             StopAllCoroutines();
             StartCoroutine(ChangeSizeUp());
         }
@@ -91,7 +70,6 @@ public class ButtonTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        //pointIn = false;
 
         if (isButton && isText)
         {
@@ -103,13 +81,14 @@ public class ButtonTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        //pointIn = false;
 
         if (isButton && isText)
         {
             StopAllCoroutines();
             txt.transform.localScale = .3f * scalefactor * Vector3.one;
+            txt.enabled = false;
         }
+        if (hideSelf) gameObject.SetActive(false);
     }
 }
 

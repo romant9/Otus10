@@ -1,32 +1,18 @@
-using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 using static Bloodymary.Game.GameSettings;
 
 namespace Bloodymary.Game
 {
     //настройки текущего уровн€. ”никальный дл€ каждой сцены
     public class StageSettings : MonoBehaviour
-    {
-        //public static StageSettings instance;
-        public MenuManager menuManager;
-        public GameManager GManager => GameManager.GManager;
-
-        public Animator _animator; //fade canvas animator
-        private Image _FadeImage;
-        
+    {        
+        //private ProgressBar progressBar => ProgressBar._ProgressBar; 
         private GamePlayType gamePlayType = GamePlayType.PvP;
         private string sceneName;
         private bool sceneNameChanged;
-
-     
-        private void Start()
-        {
-            _FadeImage = _animator.GetComponent<Image>();
-        }
-
+        
         //GUI - Dropdown_Player
         public void SetMyCharacter(TMP_Dropdown dp)
         {
@@ -38,9 +24,8 @@ namespace Bloodymary.Game
         {
             gamePlayType = (GamePlayType)dp.value;
             GSettings.gamePlayType = gamePlayType;
-            //sceneName = SceneName(gamePlayType);
             sceneNameChanged = true;
-        }
+        }      
 
         public string SceneName(GamePlayType type)
         {       
@@ -69,30 +54,24 @@ namespace Bloodymary.Game
             }
         }
 
-        public void StartNewGame(int index)
+        //GUI - StartButton
+        public void StartNewGame()
         {
-            if (sceneNameChanged)
-            {
-                sceneName = SceneName(gamePlayType);
-            }
-            else
-            {
-                sceneName = SceneNameByID(index);
-            }
-            StartCoroutine(ILoadScene());
+            sceneName = SceneName(gamePlayType);
+            ProgressBar._ProgressBar.FadeAndLoad(sceneName);
         }
-
-        private IEnumerator ILoadScene()
+        public void RestartGame()
         {
-            _animator.SetTrigger("fade");
-            yield return new WaitUntil(() => _FadeImage.color.a == 0);
-
-            sceneNameChanged = false;
-            
-            SceneManager.LoadScene(sceneName);
-
-            Debug.Log("загружаем сцену: " + sceneName);
+            sceneName = SceneManager.GetActiveScene().name;
+            Debug.Log(sceneName);
+            ProgressBar._ProgressBar.FadeAndLoad(sceneName);
         }
+        public void BackToMainMenu()
+        {
+            sceneName = SceneName(GamePlayType.MainMenu);
+            ProgressBar._ProgressBar.FadeAndLoad(sceneName);
+        }
+ 
     }
 
 }
