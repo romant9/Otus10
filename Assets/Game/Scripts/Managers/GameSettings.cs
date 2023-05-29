@@ -101,9 +101,9 @@ namespace Bloodymary.Game
         {               
         }
 
-        public ControllerTheme GetControlTheme()
+        public ControllerTheme GetControlTheme(bool opposite)
         {
-            return SinglePlayerControlTheme == ControllerThemeType.LeftPlayerTheme ? LeftPlayerTheme : RightPlayerTheme;
+            return SinglePlayerControlTheme == ControllerThemeType.LeftPlayerTheme ? (opposite ? RightPlayerTheme : LeftPlayerTheme) : RightPlayerTheme;
         }
 
     }

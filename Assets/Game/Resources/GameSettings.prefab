@@ -47,16 +47,18 @@ MonoBehaviour:
   LeftPlayerTheme:
     _turboKey: 304
     _moveKey: 119
+    _moveBackKey: 115
     _rotateLeftKey: 97
     _rotateRightKey: 100
-    _jumpKey: 306
-    _attackKey: 32
+    _jumpKey: 32
+    _attackKey: 306
     _switchWeapon: 9
     _throwRange: 103
     _healKey: 104
   RightPlayerTheme:
     _turboKey: 303
     _moveKey: 273
+    _moveBackKey: 274
     _rotateLeftKey: 276
     _rotateRightKey: 275
     _jumpKey: 305

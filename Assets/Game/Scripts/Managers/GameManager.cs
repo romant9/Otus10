@@ -27,14 +27,17 @@ namespace Bloodymary.Game
         public bool AIOn; //включить AI (авто-противник) или PvP
         public bool AIStatic; //AI (авто-противник) неактивен, отображаетс€ в режиме trainingMode
         public bool trainingMode; //режим тренировки: player не получает урона, а враги получают, но восстанавливаютс€ при отключении режима
-        public Transform Player { get; private set; }       
+        public Transform Player;// { get; private set; }       
         public SpawnController Spawn { get; private set; }
         public InfoLog GameLog { get; private set; }
         public GameStats Stats { get; private set; }
         public string victoryStats { get; private set; }
         private MenuManager MManager => MenuManager.MManager;
         public bool checkVictory { get; set; }
+        public bool isPlayedDied { get; set; }
         public int killed { get; private set; }
+        public CameraOrbit _camera { get; private set; }
+
 
         private void Awake()
         {
@@ -57,6 +60,7 @@ namespace Bloodymary.Game
             Spawn = GetComponent<SpawnController>();
             GameLog = GetComponent<InfoLog>();
             Stats = GetComponent<GameStats>();
+            _camera = Camera.main.GetComponent<CameraOrbit>();
 
             GetPlayerNames();
             PreInit();
@@ -261,7 +265,7 @@ namespace Bloodymary.Game
                         SceneMusic.PlaySoundEffect("Victory");
                     }
 
-                    if (!Player)
+                    if (!Player || isPlayedDied)
                     {
                         victoryStats = "¬ы проиграли!";
                         checkVictory = false;

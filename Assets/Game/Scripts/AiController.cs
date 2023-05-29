@@ -75,7 +75,8 @@ namespace Bloodymary.Game
                 isActive = false;
 
                 _CurrentCharacterController._animator.SetFloat(GameDataHelper.p_speed, 0);
-                _NavMeshAgent.isStopped = true;
+                if (_NavMeshAgent.enabled)
+                    _NavMeshAgent.isStopped = true;
                 StopAllCoroutines();
             }
         }
@@ -90,7 +91,15 @@ namespace Bloodymary.Game
                 _CurrentCharacterController._animator.SetFloat(GameDataHelper.p_speed, _CurrentCharacterController._speedAnim
                                                                 * _NavMeshAgent.velocity.normalized.magnitude);
 
-                _NavMeshAgent.destination = _TargetCharacterController.transform.position;
+                if (_TargetCharacterController.isAlive)
+                    _NavMeshAgent.destination = _TargetCharacterController.transform.position;
+                else
+                {
+                    _NavMeshAgent.enabled = false;
+                    //_NavMeshAgent.destination = Vector3.zero;
+
+                }
+                 
 
                 if (distance < stopDistance)
                 {

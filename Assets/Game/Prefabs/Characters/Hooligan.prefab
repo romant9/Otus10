@@ -674,7 +674,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1490630785356561218}
-  m_LocalRotation: {x: -0.012324232, y: -0.017311089, z: -0.20744276, w: 0.9780164}
+  m_LocalRotation: {x: -0.012324231, y: -0.017311087, z: -0.20744275, w: 0.9780163}
   m_LocalPosition: {x: -0.104798265, y: -0.0000000069849193, z: 0.0000000030267984}
   m_LocalScale: {x: 1, y: 0.99999994, z: 0.99999994}
   m_ConstrainProportionsScale: 0
@@ -1094,7 +1094,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1490630785356561246}
   m_LocalRotation: {x: -0.50000036, y: 0.49999967, z: 0.49999967, w: 0.50000036}
-  m_LocalPosition: {x: 0, y: 0.45108902, z: -0.036125183}
+  m_LocalPosition: {x: 0, y: 0.4510889, z: -0.036125183}
   m_LocalScale: {x: 0.99999994, y: 0.99999994, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2010,6 +2010,9 @@ GameObject:
   - component: {fileID: 4816448248622875859}
   - component: {fileID: 2019206617}
   - component: {fileID: 4321842460184762739}
+  - component: {fileID: 6513832338495465753}
+  - component: {fileID: 8315956546240663627}
+  - component: {fileID: 3969515211276813350}
   m_Layer: 0
   m_Name: Hooligan
   m_TagString: Player
@@ -2063,6 +2066,9 @@ MonoBehaviour:
   _weaponPivot: {fileID: 1490630785357047508}
   health:
     MaxHealth: 20
+  whatIsGround:
+    serializedVersion: 2
+    m_Bits: 65
 --- !u!136 &4816448248622875860
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -2086,8 +2092,8 @@ Rigidbody:
   m_GameObject: {fileID: 8315956546764020291}
   serializedVersion: 2
   m_Mass: 5
-  m_Drag: 1
-  m_AngularDrag: 1
+  m_Drag: 0.1
+  m_AngularDrag: 0.5
   m_UseGravity: 1
   m_IsKinematic: 1
   m_Interpolate: 0
@@ -2144,6 +2150,53 @@ MonoBehaviour:
   fxEffect: {fileID: 4323044704089530089}
   soundEffect: {fileID: 274244537823714896}
   effectType: 1
+--- !u!114 &6513832338495465753
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8315956546764020291}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5bf35c15c52a6ec48a9decd4f6cb3e8d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pushTime: 0.5
+  jumpForce: 50
+  downForce: 50
+  isJumping: 0
+--- !u!114 &8315956546240663627
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8315956546764020291}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c170cced39bbeab4285e8b8fea1d282c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _speedAnim: 1
+  _speedMotion: 2
+  transitionTimeUp: 0.5
+  transitionTimeDown: 0.5
+  whatIsGround:
+    serializedVersion: 2
+    m_Bits: 65
+--- !u!114 &3969515211276813350
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8315956546764020291}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5674ddeffb0cd3341a939e833d3a1c5d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &274244537952805954
 PrefabInstance:
   m_ObjectHideFlags: 0

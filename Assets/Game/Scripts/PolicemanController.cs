@@ -20,9 +20,9 @@ namespace Bloodymary.Game
             base.CharacterInit();
         }
 
-        public override void Shoot()
+        public override void Shoot(bool setAttack)
         {
-            if (Input.GetKeyDown(_currentControlTheme._attackKey))
+            if (setAttack)
             {               
                 StartCoroutine(ShootBullet());
             }

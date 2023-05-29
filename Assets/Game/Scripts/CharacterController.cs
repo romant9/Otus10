@@ -1,7 +1,10 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.EventSystems;
 using static Bloodymary.Game.GameManager;
 using static Bloodymary.Game.GameSettings;
 using static Bloodymary.Game.WeaponManager;
@@ -16,22 +19,33 @@ namespace Bloodymary.Game
         public CharacterController character { get; private set; }
         public CharacterType _characterType;// { get; set; }
 
-        protected ControllerTheme _currentControlTheme;
+        public ControllerTheme _currentControlTheme { get; protected set; }
 
-        public float _speedAnim; //скорость анимации
-        protected float _speedMult; //множитель скорости для режима Shift
-        public float _acceleration { get; private set; } //ускорение 0..1
-        float savedAcceleration;
+        public float _speedAnim = 1; //скорость анимации
         public float _speedMotion = 1; //скорость движения и вращения
         public float transitionTimeUp = .5f; //время ускорения
         public float transitionTimeDown = .5f; //время замедления
+
+        public float _speedMult { get; private set; } //множитель скорости для режима Shift
+
+        //acceleration
+        public float _acceleration { get; private set; } //ускорение 0..1
+        private float accel_Forward;
+        private float accel_Back;
+        private float accel_Left;
+        private float accel_Right;
+        float savedAcceleration;
+        //
 
         public Inventory _Inventory;
 
         protected Collider selfWeaponCollider; //свое оружие игрока, которое исключается из OnTriggerXXX
         protected NavMeshAgent _agent;
         protected Rigidbody _rigidbody;
-        protected bool isJump;
+        protected PhysicalJump _physicalJump;
+        protected SimpleMovement _simpleMovement;
+        //protected bool isJump;
+        public bool isReadyToMove { get; private set; }
 
         protected Weapon currentWeapon;
         private Weapon enemyWeapon;
@@ -43,6 +57,9 @@ namespace Bloodymary.Game
         public bool isAlive { get; private set; }
         public bool isAI { get; private set; }
 
+        private bool isGrounded;
+        public LayerMask whatIsGround;
+
         public Action GetGrenadeDamage;
         private float throwMult = 1;
 
@@ -52,6 +69,13 @@ namespace Bloodymary.Game
 
         private EffectRouter _effects;
 
+
+        private float Acceleration()
+        {
+            var accelerationArray = new float[4] { accel_Forward , accel_Back, accel_Left, accel_Right };
+            float maxValue = accelerationArray.Max();
+            return maxValue;
+        }
 
         public static bool ExtTriggerCondition(WeaponType weaponType, bool isPlayer, out bool isFire)
         {
@@ -69,6 +93,8 @@ namespace Bloodymary.Game
             _agent = GetComponent<NavMeshAgent>();
             _rigidbody = GetComponent<Rigidbody>();
             _effects = GetComponent<EffectRouter>();
+            _physicalJump = GetComponent<PhysicalJump>();
+            _simpleMovement = GetComponent<SimpleMovement>();
 
             _Inventory.Initialize();
             currentWeapon = WManager.SetupWeapon(_Inventory.weapons[0], _weaponPivot);
@@ -123,16 +149,33 @@ namespace Bloodymary.Game
             _acceleration = 0;
             isAI = false;
 
+            _agent.enabled = false;
+            _rigidbody.isKinematic = false;
+
             if (GManager.AIOn)
             {
                 if (_characterType == GManager.MyCharacterIs)
                 {
-                    _currentControlTheme = GSettings.GetControlTheme();
+                    _currentControlTheme = GSettings.GetControlTheme(false);
                     GManager.SetPlayer(this.transform);
                 }
                 else
                 {
                     isAI = true;
+                    _agent.enabled = true;
+                    _rigidbody.isKinematic = true;
+                }
+            }
+            else
+            {
+                if (_characterType == GManager.MyCharacterIs)
+                {
+                    _currentControlTheme = GSettings.GetControlTheme(false);
+                    GManager.SetPlayer(this.transform);
+                }
+                else
+                {
+                    _currentControlTheme = GSettings.GetControlTheme(true);                   
                 }
             }
             StartCoroutine(ExecuteNextFrame());
@@ -252,37 +295,60 @@ namespace Bloodymary.Game
             //костыль с компенсацией поворота персонажа при переходе к idle 
             _animator.transform.localEulerAngles = Vector3.zero;
 
-            if (!isAlive || isAI || !Initialized) return;
-            
+            if (!isAlive || isAI || !Initialized) 
+            {
+                isReadyToMove = false; 
+                return;
+            }
+            else isReadyToMove = true;
+
+            isGrounded = Physics.Raycast(transform.position, Vector3.down, 0.3f, whatIsGround);
             _speedMult = Input.GetKey(_currentControlTheme._turboKey) ? 2 : 1;
 
-            Move();
-            Rotate();
-            Jump();
+            if ((int)GManager._camera.gameCameraType != 2 && GManager.Player == this.transform)
+            {
+                //MoveFree();
+                _simpleMovement.enabled = true;
+            }
+            else
+            {
+                _simpleMovement.enabled = false;
+
+                Move();
+                Rotate();
+
+                _animator.SetFloat(GameDataHelper.p_speed, isGrounded ? _speedAnim * _speedMult * _acceleration : 0);
+                //_animator.SetFloat(GameDataHelper.p_speed, !_physicalJump.isJumping ? _speedAnim * _speedMult * _acceleration : 0);
+            }
+
             SwitchWeapon();
 
             Attack(currentWeapon._weaponType);
-
-            //Shoot();
-            //Hit();
-            //Throw();
-
-            _animator.SetFloat(GameDataHelper.p_speed, _speedAnim * _speedMult * _acceleration);
-
         }
 
         public virtual void Attack(WeaponType weaponType)
         {
+            bool setAttack;
+            if (GManager.Player == this.transform)
+            {
+                bool isOverCanvas = EventSystem.current.IsPointerOverGameObject();
+                setAttack = Input.GetKeyDown(_currentControlTheme._attackKey) || (Input.GetMouseButtonDown(0) && !isOverCanvas);
+            }
+            else
+            {
+                setAttack = Input.GetKeyDown(_currentControlTheme._attackKey);
+            }
+
             switch (weaponType)
             {
-                case WeaponType.Melee: { Hit(); break; }
-                case WeaponType.Fire: { Shoot(); break; }
-                case WeaponType.Throw: { Throw(); break; }
+                case WeaponType.Melee: { Hit(setAttack); break; }
+                case WeaponType.Fire: { Shoot(setAttack); break; }
+                case WeaponType.Throw: { Throw(setAttack); break; }
                     default: { return; }
             }
         }
 
-        public virtual void Shoot()
+        public virtual void Shoot(bool setAttack)
         {
         }
 
@@ -299,17 +365,17 @@ namespace Bloodymary.Game
 
         }
 
-        public virtual void Hit()
+        public virtual void Hit(bool setAttack)
         {
-            if (Input.GetKeyDown(_currentControlTheme._attackKey))
+            if (setAttack)
             {
                 isAttack = false;
 
-                StartCoroutine(IHit());
+                StartCoroutine(CorHit());
             }
             _animator.SetBool(GameDataHelper.p_hitting, Input.GetKey(_currentControlTheme._attackKey));
         }
-        public virtual void Throw()
+        public virtual void Throw(bool setAttack)
         {
             //пробел - throwCycle + бросок
             //G - замах, пробел - бросок
@@ -322,7 +388,7 @@ namespace Bloodymary.Game
                 StartCoroutine(_ThrowReady());
             }
 
-            if (Input.GetKeyDown(_currentControlTheme._attackKey))
+            if (setAttack)
             {              
                 _Inventory.ChangeWeaponCount(currentWeapon, -1);
                 CurrentUIData.grenadeCount.text = _Inventory.GetWeaponCount(currentWeapon).ToString();
@@ -368,7 +434,7 @@ namespace Bloodymary.Game
             }
             currentWeapon = WManager.SetupWeaponByName(currentWeapon._weaponName, _weaponPivot);
         }
-        private IEnumerator IHit()
+        private IEnumerator CorHit()
         {
             _animator.SetTrigger(GameDataHelper.p_hit);
             //yield return new WaitUntil(() => _animator.GetCurrentAnimatorClipInfo(0)[0].clip.name == clipHitName); 
@@ -403,8 +469,9 @@ namespace Bloodymary.Game
 
             transform.position += transform.forward * _speedMotion * _speedMult * _acceleration * Time.deltaTime;
         }
+       
         public void Rotate()
-        {
+        {           
             if (Input.GetKey(_currentControlTheme._rotateLeftKey))
             {
                 transform.Rotate(transform.up, -100 * _speedMotion * _speedMult * Time.deltaTime);
@@ -416,32 +483,30 @@ namespace Bloodymary.Game
         }
         private void Jump()
         {
-            if (Input.GetKeyDown(_currentControlTheme._jumpKey) && !isJump)
-            {
-                StartCoroutine(IJump());
-            }
+            //if (Input.GetKeyDown(_currentControlTheme._jumpKey) && !isJump)
+            //{
+            //    StartCoroutine(CorJump());
+            //}
         }
 
-        private IEnumerator IJump()
+        private IEnumerator CorJump()
         {
-            _agent.enabled = false;
-            _rigidbody.isKinematic = false;
-            var forwardForce = _acceleration > 0 ? transform.forward * 15 : Vector3.zero;
-            _rigidbody.AddForce((transform.up * 20 + forwardForce) * _agent.height * _speedMult, ForceMode.Impulse);
-            savedAcceleration = _acceleration;
-            _acceleration = 0;
+            //var forwardForce = _acceleration > 0 ? transform.forward * 15 : Vector3.zero;
+            //_rigidbody.AddForce((transform.up * 20 + forwardForce) * _agent.height * _speedMult, ForceMode.Impulse);
+            //savedAcceleration = _acceleration;
+            //_acceleration = 0;
             yield return new WaitForSeconds(.1f);
-            isJump = true;
+            //isJump = true;
         }
+
         private void OnCollisionEnter(Collision collision)
         {
-            if (collision.gameObject.layer == 6 && isJump)
-            {
-                _agent.enabled = true;
-                _rigidbody.isKinematic = true;
-                if (Input.GetKey(_currentControlTheme._moveKey)) _acceleration = savedAcceleration;
-                isJump = false;
-            }
+            //if (collision.gameObject.layer == 6 && isJump)
+            //{
+
+            //    if (Input.GetKey(_currentControlTheme._moveKey)) _acceleration = savedAcceleration;
+            //    isJump = false;
+            //}
         }
 
         public IEnumerator SetAccelerate(bool increase)
@@ -449,9 +514,6 @@ namespace Bloodymary.Game
             float time = 0;
             float start = _acceleration;
             float end = increase ? 1 : 0;
-
-            //_effects.GeAaudioSource().loop = increase; //play sound step
-            //if (increase) _effects.PlaySound("Walk");
 
             while (increase ? _acceleration < 1 : _acceleration > 0)
             {
@@ -475,7 +537,7 @@ namespace Bloodymary.Game
             if (isAI) GetComponent<AiController>().Execute(GManager.AIOn);
             else 
             {
-                GManager.AIOn = false;
+                //GManager.AIOn = false;
                 GManager.PreInit();
             }
             string content = CurrentUIData.PlayerName + " is died";
@@ -486,6 +548,12 @@ namespace Bloodymary.Game
             GetGrenadeDamage -= OnDamageRecieveGrenade;
 
             GManager.Characters.Remove(character);
+
+            if (GManager.Player == transform) 
+            { 
+                GManager.SetPlayer(null);
+                GManager.isPlayedDied = true;
+            }          
 
             GManager.CheckVictory();
 

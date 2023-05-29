@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 using static Bloodymary.Game.GameManager;
 
@@ -9,6 +10,9 @@ namespace Bloodymary.Game
     {
         Transform charFirst;
         Transform charSecond;
+
+        //Transform cameraGizmo;
+        //Transform cameraMoveObject;
 
         Vector3 charSecondPos;
 
@@ -22,11 +26,22 @@ namespace Bloodymary.Game
             public float camDistanceAuto;
         }
 
+        public enum GameCameraType
+        {
+            Free = 0,
+            Orbit = 1,
+            Battle = 2
+        }
+
+        public GameCameraType gameCameraType;
+
         public Position m_position, m_target;
 
         public bool disableInterpolation;
 
-		public bool disableInput;	
+		public bool disableInput;
+        private bool isCollided;
+        Vector2 backDirection;
 
 		public float m_camRotationSpeed = 10.0f;
 
@@ -42,8 +57,6 @@ namespace Bloodymary.Game
 
         [Range(0.01f, 1.0f)]
 		public float camSmoothness = 0.5f;
-
-
 
         private bool isCharacters()
         {
@@ -71,9 +84,7 @@ namespace Bloodymary.Game
         {
             if (TwoCharacters())
             {
-
                 return GManager.Characters[1].transform;
-
             }
             else if (ManyCharacters()) 
             {
@@ -81,6 +92,24 @@ namespace Bloodymary.Game
             } 
             else return GManager.Characters.First().transform;
         }
+
+        public void SetCameraType(TMP_Dropdown dp)
+        {
+            switch (dp.value)
+            {
+                case 0: //Battle
+                    gameCameraType = (GameCameraType)2;
+                    break;
+                case 1: //Orbit / Free
+                    gameCameraType = 0;
+                    break;
+                default:
+                    gameCameraType = 0;
+                    break;
+
+            }
+        }
+
 
         void Start () 
 		{
@@ -91,6 +120,7 @@ namespace Bloodymary.Game
             m_position.camDistance = m_camStartDistance;
 
             m_target = m_position;
+
         }
 
         
@@ -105,13 +135,15 @@ namespace Bloodymary.Game
 
         void LateUpdate() 
 		{
-            if (!isReady || !isCharacters()) return;
+            if (!isReady || !isCharacters() || !GManager.Player) return;
             
             if (GManager.AIOn)
             {
                 charSecondPos = Vector3.LerpUnclamped(charSecondPos, charSecond.position, 2 * Time.deltaTime);
             }
             else charSecondPos = charSecond ? charSecond.position : charFirst.position;
+
+            if (disableInput) return;
 
             ProcessInput();
 
@@ -121,24 +153,40 @@ namespace Bloodymary.Game
 
 		}       
 
+        Vector3 TargetPoint(out float distance)
+        {
+            distance = 0;
+            Vector3 pos;
+            switch (gameCameraType)
+            {                
+                case GameCameraType.Battle : pos = (charFirst.position + charSecondPos) / 2 + Vector3.up * .5f;
+                    distance = Vector3.Distance(charFirst.position, charSecondPos);
+                    break;
+                default:
+                    pos = GManager.Player.transform.position + Vector3.up * 2;
+                    break;
+            }
+            return pos;
+        }
+
         void ProcessInput()
         {
-            if (disableInput) return;
+            float mouseX = Input.GetAxis("Mouse X");
+            float mouseY = Input.GetAxis("Mouse Y");
 
-            float distance = Vector3.Distance(charFirst.position, charSecondPos);
+            targetPoint = TargetPoint(out float distance);
             m_position.camDistanceAuto = Mathf.Clamp(distance/2, 0, 20);
-            targetPoint = (charFirst.position + charSecondPos) / 2 + Vector3.up * .5f;
 
             float dt = Time.deltaTime * 1000.0f * m_camZoomSpeed;
             float amount = Mathf.Pow(1.02f, Mathf.Min(dt, 1.0f));
 
             if (Input.GetMouseButton(2))
             {
-                if (Input.GetAxis("Mouse Y") < 0.0f)
+                if (mouseY < 0.0f)
                 {
                     m_target.camDistance *= amount;
                 }
-                if (Input.GetAxis("Mouse Y") > 0.0f)
+                if (mouseY > 0.0f)
                 {
                     m_target.camDistance /= amount;
                 }
@@ -153,13 +201,12 @@ namespace Bloodymary.Game
                 m_target.camRotation.y += Input.GetAxis("Mouse Y") * m_camRotationSpeed;
                 m_target.camRotation.x += Input.GetAxis("Mouse X") * m_camRotationSpeed;
             }
-
         }
 
         void MoveCamera()
 		{
 
-			float ct = Mathf.Cos(m_position.camRotation.y * Mathf.Deg2Rad);
+            float ct = Mathf.Cos(m_position.camRotation.y * Mathf.Deg2Rad);
 			float st = Mathf.Sin(m_position.camRotation.y * Mathf.Deg2Rad);
 			float cp = Mathf.Cos(m_position.camRotation.x * Mathf.Deg2Rad);
 			float sp = Mathf.Sin(m_position.camRotation.x * Mathf.Deg2Rad);
@@ -167,7 +214,7 @@ namespace Bloodymary.Game
 			Vector3 lookAt = targetPoint;
 			Vector3 pos = lookAt + new Vector3(sp*st, ct, cp*st) * (m_position.camDistance + m_position.camDistanceAuto);
 
-			transform.position = pos;
+            transform.position = pos;
 			transform.LookAt(lookAt);
 		
 		}
@@ -187,7 +234,49 @@ namespace Bloodymary.Game
 			m_position.camDistance = Mathf.Lerp(m_position.camDistance, m_target.camDistance, camLerp);
 			m_position.camRotation = Vector2.Lerp(m_position.camRotation, m_target.camRotation, camLerp);
 
-		}
-		
+		}         
+
+        public void OnTriggerEnter(Collider collision)
+        {
+            if (collision.gameObject.tag != "Player")
+            {
+                backDirection = m_target.camRotation - m_position.camRotation;
+                m_target.camRotation -= backDirection * 2;
+                isCollided = true;
+            }
+        }
+
+
+        public void OnTriggerExit(Collider collision)
+        {
+            if (collision.gameObject.tag != "Player")
+            {
+                isCollided = false;
+            }
+        }
+
+        public void OnCollisionEnter(Collision collision)
+        {
+            if (collision.gameObject.tag != "Player")
+            {
+                Vector3 point = collision.contacts.FirstOrDefault().point;
+                Vector2 direction = point - new Vector3(transform.position.x, point.y, transform.position.z);
+                float dirLength = direction.magnitude;
+
+                if (dirLength > .1f)
+                {
+                    m_target.camRotation += direction.normalized * 10;
+                    isCollided = true;
+
+                }
+            }            
+        }
+        public void OnCollisionExit(Collision collision)
+        {
+            if (collision.gameObject.tag != "Player")
+            {
+                isCollided = false;
+            }
+        }
     }	
 }

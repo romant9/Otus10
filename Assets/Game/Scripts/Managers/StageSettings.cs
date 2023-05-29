@@ -2,6 +2,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using static Bloodymary.Game.GameSettings;
+using static Bloodymary.Game.GameManager;
+using System.Linq;
 
 namespace Bloodymary.Game
 {
@@ -11,12 +13,21 @@ namespace Bloodymary.Game
         //private ProgressBar progressBar => ProgressBar._ProgressBar; 
         private GamePlayType gamePlayType = GamePlayType.PvP;
         private string sceneName;
-        private bool sceneNameChanged;
         
         //GUI - Dropdown_Player
         public void SetMyCharacter(TMP_Dropdown dp)
         {
             GSettings.MyCharacterIs = (CharacterType)dp.value;
+            GManager.MyCharacterIs = GSettings.MyCharacterIs;
+            if (GManager.Characters.Count > 0)
+            {
+                CharacterController character = GManager.Characters.Where(x=>x._characterType == GSettings.MyCharacterIs).First();
+                if (character) 
+                {
+                    GManager.SetPlayer(character.transform);
+                    GManager.PreInit();
+                }
+            }
         }
 
         //GUI - Dropdown_Scene     
@@ -24,7 +35,6 @@ namespace Bloodymary.Game
         {
             gamePlayType = (GamePlayType)dp.value;
             GSettings.gamePlayType = gamePlayType;
-            sceneNameChanged = true;
         }      
 
         public string SceneName(GamePlayType type)

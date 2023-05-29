@@ -8,3 +8,7 @@ Unity UI и загрузка сцен
 Спецэффекты. Звуки и музыка
 Загружаем сцену Assets\Game\Scenes\MainMenu.unity
 или сразу Assets\Game\Scenes\Levels\SceneDevelop.unity
+# Otus18
+Физика
+Загружаем сцену Assets\Game\Scenes\MainMenu.unity
+или сразу Assets\Game\Scenes\Levels\SceneDevelop.unity
